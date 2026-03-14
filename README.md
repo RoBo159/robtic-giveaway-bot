@@ -1,7 +1,7 @@
 # CheckBot Dashboard
 
-![License](https://img.shields.io/github/license/RoBoDev/CheckBot)
-![Node Version](https://img.shields.io/node/v/checkbot-dashboard)
+![License](https://img.shields.io/github/license/RoBo159/robtic-giveaway-bot)
+![Node Version](https://img.shields.io/node/v/22)
 
 A robust Discord Giveaway Bot featuring a comprehensive web dashboard for managing giveaways, customizing templates, and viewing real-time logs. Built with Node.js, Express, Discord.js, and MongoDB.
 
