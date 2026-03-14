@@ -1,0 +1,212 @@
+<!-- Config Settings Popup -->
+<div class="config-popup-overlay" id="configPopupOverlay" onclick="closeConfigPopup(event)">
+    <div class="config-popup" onclick="event.stopPropagation()">
+        <div class="config-popup-header">
+            <h3><i class="fa-solid fa-gear"></i> Giveaway Settings</h3>
+            <button type="button" class="config-popup-close" onclick="closeConfigPopup()">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+        
+        <form id="configPopupForm" class="config-popup-body">
+            <!-- Giveaway Type -->
+            <div class="config-section">
+                <label class="config-label">Giveaway Type</label>
+                <div class="config-type-selector">
+                    <label class="config-type-option">
+                        <input type="radio" name="popupGiveawayType" value="reaction" <%= config.giveawayType === 'reaction' ? 'checked' : '' %> onchange="updatePopupPreview()">
+                        <div class="config-type-card">
+                            <i class="fa-solid fa-face-smile"></i>
+                            <span>Reaction</span>
+                        </div>
+                    </label>
+                    <label class="config-type-option">
+                        <input type="radio" name="popupGiveawayType" value="button" <%= config.giveawayType === 'button' ? 'checked' : '' %> onchange="updatePopupPreview()">
+                        <div class="config-type-card">
+                            <i class="fa-solid fa-square"></i>
+                            <span>Button</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Reaction Options -->
+            <div class="config-section" id="popupReactionOptions">
+                <label class="config-label">Reaction Emoji</label>
+                <div class="emoji-input-group">
+                    <input type="hidden" name="popupReactionEmoji" id="popupReactionEmoji" value="<%= config.reactionEmoji || '🎉' %>">
+                    <button type="button" class="emoji-btn-trigger" onclick="openEmojiPicker('popupReactionEmoji', 'popupReactionEmojiPreview')">
+                        <span class="emoji-preview" id="popupReactionEmojiPreview">🎉</span>
+                    </button>
+                    <span class="config-hint">Click to change emoji</span>
+                </div>
+            </div>
+
+            <!-- Button Options -->
+            <div class="config-section" id="popupButtonOptions" style="display: none;">
+                <label class="config-label">Button Settings</label>
+                <div class="config-input-row">
+                    <input type="text" name="popupButtonName" id="popupButtonName" value="<%= config.buttonName || 'Enter Giveaway' %>" placeholder="Button text" class="config-input" oninput="updatePopupPreview()">
+                    <input type="hidden" name="popupButtonEmoji" id="popupButtonEmoji" value="<%= config.buttonEmoji || '🎁' %>">
+                    <button type="button" class="emoji-btn-trigger" onclick="openEmojiPicker('popupButtonEmoji', 'popupButtonEmojiPreview')">
+                        <span class="emoji-preview" id="popupButtonEmojiPreview">🎁</span>
+                    </button>
+                </div>
+                
+                <label class="config-label" style="margin-top: 0.75rem;">Button Color</label>
+                <div class="config-colors">
+                    <label class="config-color-option">
+                        <input type="radio" name="popupButtonColor" value="primary" <%= config.buttonColor === 'primary' ? 'checked' : '' %> onchange="updatePopupPreview()">
+                        <div class="config-color-swatch" style="background: #5865f2;"></div>
+                        <span>Blue</span>
+                    </label>
+                    <label class="config-color-option">
+                        <input type="radio" name="popupButtonColor" value="success" <%= config.buttonColor === 'success' ? 'checked' : '' %> onchange="updatePopupPreview()">
+                        <div class="config-color-swatch" style="background: #3ba55c;"></div>
+                        <span>Green</span>
+                    </label>
+                    <label class="config-color-option">
+                        <input type="radio" name="popupButtonColor" value="danger" <%= config.buttonColor === 'danger' ? 'checked' : '' %> onchange="updatePopupPreview()">
+                        <div class="config-color-swatch" style="background: #ed4245;"></div>
+                        <span>Red</span>
+                    </label>
+                    <label class="config-color-option">
+                        <input type="radio" name="popupButtonColor" value="secondary" <%= config.buttonColor === 'secondary' ? 'checked' : '' %> onchange="updatePopupPreview()">
+                        <div class="config-color-swatch" style="background: #4f545c;"></div>
+                        <span>Gray</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Embed Settings -->
+            <div class="config-section">
+                <label class="config-label">Embed Color</label>
+                <div class="config-color-picker">
+                    <input type="color" name="popupEmbedColor" id="popupEmbedColor" value="<%= config.embedColor || '#0057ff' %>" oninput="updatePopupPreview()">
+                    <span class="config-color-value" id="popupColorValue"><%= config.embedColor || '#0057ff' %></span>
+                </div>
+            </div>
+
+            <div class="config-section">
+                <label class="config-label">Embed Title</label>
+                <input type="text" name="popupEmbedTitle" id="popupEmbedTitle" value="<%= config.embedTitle || 'New Giveaway!' %>" class="config-input" oninput="updatePopupPreview()">
+            </div>
+
+            <div class="config-section">
+                <div class="config-label-row">
+                    <label class="config-label">Embed Description</label>
+                    <%- include('variables-info') %>
+                </div>
+                <textarea name="popupEmbedDescription" id="popupEmbedDescription" rows="3" class="config-input" oninput="updatePopupPreview()"><%= config.embedDescription || 'React to enter!' %></textarea>
+            </div>
+        </form>
+
+        <div class="config-popup-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeConfigPopup()">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="saveConfigSettings()">
+                <i class="fa-solid fa-check"></i> Apply Settings
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function openConfigPopup() {
+    document.getElementById('configPopupOverlay').classList.add('show');
+    document.body.style.overflow = 'hidden';
+    initPopupEmojis();
+    updatePopupPreview();
+}
+
+function closeConfigPopup(event) {
+    if (event && event.target !== event.currentTarget) return;
+    document.getElementById('configPopupOverlay').classList.remove('show');
+    document.body.style.overflow = '';
+}
+
+function initPopupEmojis() {
+    const reactionEmoji = document.getElementById('popupReactionEmoji').value;
+    const buttonEmoji = document.getElementById('popupButtonEmoji').value;
+    setEmojiContent('popupReactionEmojiPreview', reactionEmoji);
+    setEmojiContent('popupButtonEmojiPreview', buttonEmoji);
+}
+
+function updatePopupPreview() {
+    const giveawayType = document.querySelector('input[name="popupGiveawayType"]:checked')?.value || 'reaction';
+    
+    // Show/hide sections
+    document.getElementById('popupReactionOptions').style.display = giveawayType === 'reaction' ? 'block' : 'none';
+    document.getElementById('popupButtonOptions').style.display = giveawayType === 'button' ? 'block' : 'none';
+    
+    // Update color value display
+    const colorInput = document.getElementById('popupEmbedColor');
+    document.getElementById('popupColorValue').textContent = colorInput.value;
+}
+
+function saveConfigSettings() {
+    const formData = {
+        giveawayType: document.querySelector('input[name="popupGiveawayType"]:checked')?.value || 'reaction',
+        reactionEmoji: document.getElementById('popupReactionEmoji').value,
+        buttonEmoji: document.getElementById('popupButtonEmoji').value,
+        buttonName: document.getElementById('popupButtonName').value,
+        buttonColor: document.querySelector('input[name="popupButtonColor"]:checked')?.value || 'primary',
+        embedColor: document.getElementById('popupEmbedColor').value,
+        embedTitle: document.getElementById('popupEmbedTitle').value,
+        embedDescription: document.getElementById('popupEmbedDescription').value
+    };
+    
+    // Submit to server
+    fetch('/dashboard/<%= guild.id %>/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+    })
+    .then(r => {
+        if (r.redirected) {
+            showSnackbar('Settings saved! Refreshing...', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else if (r.ok) {
+            showSnackbar('Settings saved!', 'success');
+            // Update local config
+            Object.assign(config, formData);
+            // Update preview
+            updateMainPreview();
+            closeConfigPopup();
+        } else {
+            throw new Error('Failed to save settings');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        showSnackbar('Error saving settings', 'error');
+    });
+}
+
+function updateMainPreview() {
+    // Update embed color
+    const embedBorder = document.querySelector('.embed-border');
+    if (embedBorder) embedBorder.style.backgroundColor = config.embedColor;
+    
+    // Update title and description
+    const titleEl = document.getElementById('previewTitle');
+    const descEl = document.getElementById('previewDescription');
+    if (titleEl) titleEl.textContent = config.embedTitle;
+    if (descEl) descEl.textContent = config.embedDescription;
+    
+    // Update emoji previews
+    if (config.giveawayType === 'button') {
+        setEmojiContent('previewButtonEmoji', config.buttonEmoji, 20);
+        const labelEl = document.getElementById('previewButtonLabel');
+        if (labelEl) labelEl.textContent = config.buttonName;
+    } else {
+        setEmojiContent('previewReactionEmoji', config.reactionEmoji, 22);
+    }
+}
+
+// Close on Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('configPopupOverlay').classList.contains('show')) {
+        closeConfigPopup();
+    }
+});
+</script>

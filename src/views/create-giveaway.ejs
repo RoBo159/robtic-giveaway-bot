@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <title>Create Giveaway - <%= guild.name %> | Giveaway</title>
+    <link rel="stylesheet" href="/css/create-giveaway.css">
+    <link rel="stylesheet" href="/css/emoji-picker.css">
+</head>
+<body class="dark">
+    <%- include('partials/navbar', { user: user, guild: guild, page: 'create', allGuilds: allGuilds }) %>
+
+    <div class="main-content">
+        <div class="back-button">
+            <a href="/dashboard/<%= guild.id %>" class="btn-back">
+                <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+        
+        <h1 class="text-2xl font-bold mb-6">Create Giveaway</h1>
+        
+        <div class="create-giveaway-layout">
+            <div class="create-form-section">
+                <div class="card p-8">
+                    <form action="/dashboard/<%= guild.id %>/create" method="POST" class="create-giveaway-form" id="createForm">
+                        <div class="form-group">
+                            <label class="label">Prize</label>
+                            <input type="text" name="prize" id="prizeInput" required placeholder="e.g. Nitro Classic" oninput="updatePreview()">
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="label">Duration (Minutes)</label>
+                                <input type="number" name="duration" id="durationInput" value="60" required oninput="updatePreview()">
+                            </div>
+                            <div class="form-group">
+                                <label class="label">Required Role</label>
+                                <select name="requiredRole" id="requiredRoleSelect" class="input-select" onchange="updatePreview()">
+                                    <option value="">Everyone (@everyone)</option>
+                                    <% roles.forEach(role => { %>
+                                        <option value="<%= role.id %>"><%= role.name %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="label">Winners</label>
+                                <input type="number" name="winnersCount" id="winnersInput" value="1" min="1" required oninput="updatePreview()">
+                            </div>
+                            <div class="form-group">
+                                <label class="label">Channel</label>
+                                <select name="channelId" id="channelSelect" required class="input-select">
+                                    <option value="">-- Select a channel --</option>
+                                    <% channels.forEach(ch => { %>
+                                        <option value="<%= ch.id %>">#<%= ch.name %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="label">Max Entries (0 = Unlimited)</label>
+                            <input type="number" name="maxEntries" id="maxEntriesInput" value="0" min="0" oninput="updatePreview()">
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fa-solid fa-gift"></i> Create Giveaway
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="saveTemplate()">
+                                <i class="fa-solid fa-bookmark"></i> Save as Template
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <% if (typeof templates !== 'undefined' && templates.length > 0) { %>
+                <div class="card p-6">
+                    <h3 class="font-bold mb-4">My Templates</h3>
+                    <div class="templates-compact">
+                        <% templates.forEach(t => { %>
+                        <div class="template-btn" onclick="loadDbTemplate('<%= t.name %>', '<%= t.prize %>', <%= t.duration %>, <%= t.winnersCount %>, <%= t.maxEntries || 0 %>, '<%= t.channelId || '' %>', '<%= t.requiredRole || '' %>')">
+                            <div class="template-btn-info">
+                                <span class="template-btn-name"><%= t.name %></span>
+                                <span class="template-btn-detail"><%= t.prize %> • <%= t.duration %>min • <%= t.winnersCount %> winner(s)</span>
+                            </div>
+                            <i class="fa-solid fa-chevron-right" style="color: var(--muted-foreground);"></i>
+                        </div>
+                        <% }) %>
+                    </div>
+                </div>
+                <% } %>
+            </div>
+
+            <div class="preview-section">
+                <div class="preview-header">
+                    <h3 class="font-bold">Live Preview</h3>
+                    <button type="button" class="settings-btn" onclick="openConfigPopup()" title="Giveaway Settings">
+                        <i class="fa-solid fa-gear"></i>
+                    </button>
+                </div>
+                
+                <!-- Discord Embed Preview -->
+                <div class="discord-embed-preview">
+                    <div class="embed-content">
+                        <div class="embed-border" style="background-color: <%= config.embedColor || '#0057ff' %>;"></div>
+                        <div class="embed-body">
+                            <div class="embed-title" id="previewTitle"><%= config.embedTitle || 'New Giveaway!' %></div>
+                            <div class="embed-description" id="previewDescription">
+                                <%= config.embedDescription || 'React to enter!' %>
+                            </div>
+                            <div class="embed-field" id="previewRequirement" style="display: none;">
+                                <div class="embed-field-name">Requirement</div>
+                                <div class="embed-field-value" id="previewRoleValue"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Button or Reaction Preview -->
+                <% if (config.giveawayType === 'button') { %>
+                    <div class="discord-button-preview discord-btn-<%= config.buttonColor || 'primary' %>" id="previewButton">
+                        <span id="previewButtonEmoji"></span>
+                        <span id="previewButtonLabel"><%= config.buttonName || 'Enter Giveaway' %></span>
+                    </div>
+                <% } else { %>
+                    <div class="preview-reaction">
+                        <span style="font-size: 1.25rem;" id="previewReactionEmoji"></span>
+                        <span>1</span>
+                    </div>
+                <% } %>
+                
+                <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <h3 class="font-bold" style="font-size: 0.875rem; margin: 0;">Current Settings</h3>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="openConfigPopup()" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                            <i class="fa-solid fa-pen"></i> Edit
+                        </button>
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--muted-foreground);">
+                        <p><strong>Type:</strong> <%= config.giveawayType === 'button' ? 'Button' : 'Reaction' %></p>
+                        <p><strong>Embed Color:</strong> <span style="color: <%= config.embedColor %>"><%= config.embedColor %></span></p>
+                        <% if (config.mentionEnabled) { %>
+                            <p><strong>Mention:</strong> <%= config.mentionType === 'everyone' ? '@everyone' : config.mentionType === 'here' ? '@here' : 'Role' %></p>
+                        <% } %>
+                    </div>
+                </div>
+
+                <!-- Quick Templates -->
+                <div class="templates-compact">
+                    <h4 style="font-size: 0.75rem; color: var(--muted-foreground); margin-bottom: 0.5rem;">QUICK TEMPLATES</h4>
+                    <div class="template-btn" onclick="loadTemplate('nitro')">
+                        <div class="template-btn-info">
+                            <span class="template-btn-name">Nitro Giveaway</span>
+                            <span class="template-btn-detail">2h • 1 winner</span>
+                        </div>
+                        <i class="fa-solid fa-chevron-right" style="color: var(--muted-foreground);"></i>
+                    </div>
+                    <div class="template-btn" onclick="loadTemplate('steam')">
+                        <div class="template-btn-info">
+                            <span class="template-btn-name">Steam Gift Card</span>
+                            <span class="template-btn-detail">2h • 1 winner</span>
+                        </div>
+                        <i class="fa-solid fa-chevron-right" style="color: var(--muted-foreground);"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <%- include('partials/emoji-picker', { serverEmojis: serverEmojis }) %>
+    <%- include('partials/config-popup', { config: config, guild: guild }) %>
+    <%- include('partials/notifications') %>
+    <script src="/js/utils.js"></script>
+    <script src="/js/notifications.js"></script>
+    <script src="/js/emoji-picker.js"></script>
+    <script src="/js/create-giveaway.js"></script>
+    <script>
+        // Initialize data from server - assign to globals from create-giveaway.js
+        config = {
+            embedTitle: <%- JSON.stringify(config.embedTitle || 'New Giveaway!') %>,
+            embedDescription: <%- JSON.stringify(config.embedDescription || 'React to enter!') %>,
+            embedColor: <%- JSON.stringify(config.embedColor || '#0057ff') %>,
+            giveawayType: <%- JSON.stringify(config.giveawayType || 'reaction') %>,
+            buttonName: <%- JSON.stringify(config.buttonName || 'Enter Giveaway') %>,
+            buttonEmoji: <%- JSON.stringify(config.buttonEmoji || '🎁') %>,
+            reactionEmoji: <%- JSON.stringify(config.reactionEmoji || '🎉') %>,
+            buttonColor: <%- JSON.stringify(config.buttonColor || 'primary') %>,
+            guildName: <%- JSON.stringify(guild.name) %>
+        };
+        
+        templates = {
+            nitro: { prize: 'Discord Nitro Classic (1 Month)', duration: 120, winnersCount: 1, maxEntries: 0 },
+            steam: { prize: 'Steam Gift Card ($25)', duration: 120, winnersCount: 1, maxEntries: 0 }
+        };
+        
+        roleMap = {
+            <% roles.forEach((role, i) => { %>'<%= role.id %>': '<%= role.name %>'<%= i < roles.length - 1 ? ',' : '' %><% }) %>
+        };
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const buttonEmojiEl = document.getElementById('previewButtonEmoji');
+            if (buttonEmojiEl) {
+                buttonEmojiEl.innerHTML = getEmojiDisplay(config.buttonEmoji);
+            }
+            
+            const reactionEmojiEl = document.getElementById('previewReactionEmoji');
+            if (reactionEmojiEl) {
+                reactionEmojiEl.innerHTML = getEmojiDisplay(config.reactionEmoji);
+            }
+        });
+    </script>
+</body>
+</html>

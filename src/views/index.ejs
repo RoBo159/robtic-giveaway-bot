@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <title>Giveaway - Discord Giveaway Bot</title>
+    <link rel="stylesheet" href="/css/index.css">
+</head>
+<body class="dark">
+    <%- include('partials/navbar', { user: user, page: 'index', guild: null }) %>
+    
+    <div class="landing-container">
+        <div class="landing-header">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 1rem;">
+                <div style="background: linear-gradient(135deg, var(--primary), var(--accent)); border-radius: 0.75rem; width: 4rem; height: 4rem; display: flex; align-items: center; justify-content: center;">
+                    <i class="fa-solid fa-gift" style="color: white; font-size: 1.875rem;"></i>
+                </div>
+            </div>
+            <h1>Giveaway</h1>
+            <p>The ultimate Discord giveaway bot. Create, manage, and automate giveaways across all your servers with ease.</p>
+        </div>
+
+        <% if (user) { %>
+            <div class="auth-section" style="flex-direction: column; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
+                    <% 
+                        const avatarId = user.avatar;
+                        const userId = user.discordId || user.id;
+                        let avatarUrl;
+                        if (avatarId) {
+                            avatarUrl = `https://cdn.discordapp.com/avatars/${userId}/${avatarId}.png`;
+                        } else {
+                            const defaultNum = parseInt(userId) % 5;
+                            avatarUrl = `https://cdn.discordapp.com/embed/avatars/${defaultNum}.png`;
+                        }
+                    %>
+                    <img src="<%= avatarUrl %>" alt="Avatar" class="avatar" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
+                    <span class="font-bold">Welcome, <%= user.username %>!</span>
+                </div>
+                <a href="/dashboard" class="btn btn-primary" style="width: 200px;">
+                    <i class="fa-solid fa-gauge"></i> Go to Dashboard
+                </a>
+                <a href="/auth/logout" class="btn btn-destructive" style="width: 200px; margin-top: 0.5rem;">
+                    <i class="fa-solid fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        <% } else { %>
+            <div class="landing-actions">
+                <a href="/auth/discord" class="discord-login-btn">
+                    <i class="fa-brands fa-discord"></i> Login with Discord
+                </a>
+            </div>
+        <% } %>
+
+        <div class="landing-features">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fa-solid fa-gift"></i>
+                </div>
+                <h3>Easy Giveaways</h3>
+                <p>Create giveaways with just a few clicks. Set duration, winners, and requirements instantly.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fa-solid fa-sliders"></i>
+                </div>
+                <h3>Full Control</h3>
+                <p>Customize every aspect - from messages to reactions. Make giveaways match your server.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+                <h3>Detailed Logs</h3>
+                <p>Track all giveaway activity with detailed logs and winner history.</p>
+            </div>
+        </div>
+
+        <footer class="app-footer">
+            <p>&copy; 2026 <a href="https://discord.gg/3vfqhtgZM5" target="_blank" class="footer-link">Robtic</a>. All rights reserved.</p>
+        </footer>
+    </div>
+</body>
+</html>

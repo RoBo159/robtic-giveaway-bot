@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <title>Add Bot | Giveaway</title>
+</head>
+<body class="dark flex flex-col items-center justify-center h-screen">
+    <div class="card p-8 text-center" style="max-width: 28rem; width: 100%;">
+        <div style="background: rgba(var(--primary-rgb), 0.2); width: 4rem; height: 4rem; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; margin-left: auto; margin-right: auto; margin-bottom: 1.5rem;">
+            <i class="fa-solid fa-gift" style="color: var(--primary); font-size: 1.875rem;"></i>
+        </div>
+        <h1 class="text-2xl font-bold mb-2">Giveaway Bot Required</h1>
+        <p style="color: var(--muted-foreground); margin-bottom: 1.5rem;">Giveaway bot is not in <strong><%= guildName %></strong>. Please invite the bot to continue.</p>
+        <a href="<%= inviteLink %>" target="_blank" class="btn btn-primary w-full mb-4">
+            <i class="fa-solid fa-plus mr-2"></i> Invite Bot
+        </a>
+        <a href="/dashboard" class="text-sm text-muted-foreground hover:underline">Back to Dashboard</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <title>Logs - <%= guild.name %> | Giveaway</title>
+    <link rel="stylesheet" href="/css/logs.css">
+</head>
+<body class="dark">
+    <%- include('partials/navbar', { user: user, guild: guild, page: 'logs', allGuilds: allGuilds }) %>
+    <%- include('partials/notifications') %>
+
+    <div class="main-content">
+        <div class="back-button">
+            <a href="/dashboard" class="btn-back">
+                <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+
+        <h1 class="text-2xl font-bold mb-6">Giveaway Logs</h1>
+        
+        <div class="card p-0 overflow-hidden logs-container">
+            <div class="logs-table-wrapper">
+                <table class="logs-table">
+                    <thead>
+                        <tr>
+                            <th>N</th>
+                            <th>Prize</th>
+                            <th>Status</th>
+                            <th>Ends / Ended On</th>
+                            <th>Winners</th>
+                            <th>Entries</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (giveaways.length === 0) { %>
+                            <tr><td colspan="6" class="text-center empty-state">No giveaways found.</td></tr>
+                        <% } %>
+                        
+                        <% giveaways.forEach((g, index) => { %>
+                            <tr>
+                                <td><%= index + 1 %></td>
+                                <td class="giveaway-prize"><%= g.prize %></td>
+                                <td>
+                                    <% if (g.ended) { %>
+                                        <span class="giveaway-status status-ended">
+                                            <span class="status-dot"></span>
+                                            Ended
+                                        </span>
+                                    <% } else { %>
+                                        <span class="giveaway-status status-active">
+                                            <span class="status-dot"></span>
+                                            Active
+                                        </span>
+                                    <% } %>
+                                </td>
+                                <td><%= g.endTime.toLocaleString() %></td>
+                                <td>
+                                    <% if (g.ended) { %>
+                                        <% if (g.winners && g.winners.length > 0) { %>
+                                            <span class="winner-badge" data-tooltip="<%= g.winnerNames ? g.winnerNames.join(', ') : '' %>">
+                                                <i class="fa-solid fa-trophy"></i>
+                                                <%= g.winners.length %> Winner<%= g.winners.length !== 1 ? 's' : '' %>
+                                            </span>
+                                        <% } else { %>
+                                            <span class="text-muted-foreground">No Winners</span>
+                                        <% } %>
+                                    <% } else { %>
+                                        -
+                                    <% } %>
+                                </td>
+                                <td><%= g.entries.length %></td>
+                                <td>
+                                    <div class="action-menu">
+                                        <button class="three-dots-btn" onclick="toggleMenu(this)">
+                                            <i class="fa-solid fa-ellipsis-vertical"></i>
+                                        </button>
+                                        <div class="action-dropdown">
+                                            <button class="dropdown-item" onclick="showDetails('<%= g._id %>', '<%= g.prize %>', '<%= g.hostName %>', '<%= g.channelName %>', '<%= g.roleName %>', <%= g.winners.length %>, '<%= JSON.stringify(g.winners).replace(/'/g, '&#39;') %>')">
+                                                <i class="fa-solid fa-info-circle"></i> Details
+                                            </button>
+                                            <button class="dropdown-item" onclick="remakeGiveaway('<%= JSON.stringify(g).replace(/'/g, '&#39;') %>')">
+                                                <i class="fa-solid fa-redo"></i> Remake
+                                            </button>
+                                            <% if (!g.ended) { %>
+                                                <button class="dropdown-item" onclick="stopGiveaway('<%= g._id %>', '<%= guild.id %>')">
+                                                    <i class="fa-solid fa-stop"></i> Stop
+                                                </button>
+                                            <% } %>
+                                            <button class="dropdown-item delete" onclick="deleteGiveaway('<%= g._id %>', '<%= guild.id %>')">
+                                                <i class="fa-solid fa-trash"></i> Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="pagination-wrapper">
+                <div class="per-page-selector">
+                    <span>Show:</span>
+                    <select id="perPageSelect" onchange="changePerPage(this.value)">
+                        <option value="10" <%= perPage === 10 ? 'selected' : '' %>>10</option>
+                        <option value="50" <%= perPage === 50 ? 'selected' : '' %>>50</option>
+                        <option value="100" <%= perPage === 100 ? 'selected' : '' %>>100</option>
+                    </select>
+                    <span>per page</span>
+                </div>
+                
+                <% if (totalPages > 1) { %>
+                <div class="pagination">
+                    <a href="?page=<%= currentPage - 1 %>&limit=<%= perPage %>" class="pagination-btn <%= currentPage <= 1 ? 'disabled' : '' %>" <%= currentPage <= 1 ? 'onclick="return false;"' : '' %>>
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </a>
+                    
+                    <div class="pagination-pages">
+                        <% 
+                        let startPage = Math.max(1, currentPage - 2);
+                        let endPage = Math.min(totalPages, currentPage + 2);
+                        
+                        if (startPage > 1) { %>
+                            <a href="?page=1&limit=<%= perPage %>" class="pagination-page">1</a>
+                            <% if (startPage > 2) { %><span class="pagination-ellipsis">...</span><% } %>
+                        <% }
+                        
+                        for (let i = startPage; i <= endPage; i++) { %>
+                            <a href="?page=<%= i %>&limit=<%= perPage %>" class="pagination-page <%= i === currentPage ? 'active' : '' %>"><%= i %></a>
+                        <% }
+                        
+                        if (endPage < totalPages) { 
+                            if (endPage < totalPages - 1) { %><span class="pagination-ellipsis">...</span><% } %>
+                            <a href="?page=<%= totalPages %>&limit=<%= perPage %>" class="pagination-page"><%= totalPages %></a>
+                        <% } %>
+                    </div>
+                    
+                    <a href="?page=<%= currentPage + 1 %>&limit=<%= perPage %>" class="pagination-btn <%= currentPage >= totalPages ? 'disabled' : '' %>" <%= currentPage >= totalPages ? 'onclick="return false;"' : '' %>>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </a>
+                </div>
+                <% } else { %>
+                <div class="pagination-placeholder"></div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+
+    <div id="detailsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="detailsPrize"></h2>
+                <button class="modal-close" onclick="closeDetails()">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="detail-item">
+                    <span class="detail-label">Host:</span>
+                    <span id="detailsHost"></span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Channel:</span>
+                    <span id="detailsChannel"></span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Requirement:</span>
+                    <span id="detailsRequirement"></span>
+                </div>
+                <div class="detail-item" id="detailsWinnersItem" style="display: none;">
+                    <span class="detail-label">Winners:</span>
+                    <span id="detailsWinners"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function changePerPage(limit) {
+            window.location.href = `?page=1&limit=${limit}`;
+        }
+
+        function toggleMenu(btn) {
+            document.querySelectorAll('.action-dropdown.active').forEach(el => {
+                if (el !== btn.nextElementSibling) {
+                    el.classList.remove('active');
+                }
+            });
+            
+            btn.nextElementSibling.classList.toggle('active');
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.action-menu')) {
+                document.querySelectorAll('.action-dropdown.active').forEach(el => {
+                    el.classList.remove('active');
+                });
+            }
+        });
+
+        function showDetails(id, prize, host, channel, requirement, winnerCount, winnersJson) {
+            document.getElementById('detailsPrize').textContent = prize;
+            document.getElementById('detailsHost').textContent = host;
+            document.getElementById('detailsChannel').textContent = channel;
+            document.getElementById('detailsRequirement').textContent = requirement || 'None (Everyone)';
+            
+            const winnersItem = document.getElementById('detailsWinnersItem');
+            if (winnerCount > 0) {
+                try {
+                    const winners = JSON.parse(winnersJson || '[]');
+                    let winnersText = '';
+                    if (winners.length > 0) {
+                        winnersText = winners.map(id => `<@${id}>`).join(', ');
+                    } else {
+                        winnersText = winnerCount + ' Winner' + (winnerCount !== 1 ? 's' : '');
+                    }
+                    document.getElementById('detailsWinners').innerHTML = winnersText;
+                    winnersItem.style.display = 'grid';
+                } catch (e) {
+                    document.getElementById('detailsWinners').textContent = winnerCount + ' Winner' + (winnerCount !== 1 ? 's' : '');
+                    winnersItem.style.display = 'grid';
+                }
+            } else {
+                winnersItem.style.display = 'none';
+            }
+            
+            document.getElementById('detailsModal').classList.add('active');
+        }
+
+        function stopGiveaway(id, guildId) {
+            showConfirm('Stop Giveaway', 'Are you sure you want to stop this giveaway and declare winners?', () => {
+                fetch(`/dashboard/${guildId}/giveaway/${id}/stop`, { method: 'POST' })
+                    .then(r => {
+                        if (!r.ok) {
+                            return r.json().then(data => { throw new Error(data.error || 'Failed to stop giveaway'); });
+                        }
+                        return r.json();
+                    })
+                    .then(data => {
+                        showSnackbar('Giveaway stopped! Winners: ' + data.winnerCount, 'success');
+                        setTimeout(() => location.reload(), 1500);
+                    })
+                    .catch(err => {
+                        console.error('Error:', err);
+                        showSnackbar('Error: ' + err.message, 'error');
+                    });
+            });
+        }
+
+        function remakeGiveaway(giveawayData) {
+            try {
+                const giveaway = typeof giveawayData === 'string' ? JSON.parse(giveawayData) : giveawayData;
+                const params = new URLSearchParams();
+                params.append('prize', giveaway.prize);
+                params.append('duration', '60'); 
+                params.append('channelId', giveaway.channelId);
+                params.append('requiredRole', giveaway.requiredRole || '');
+                params.append('winnersCount', giveaway.winnersCount);
+                params.append('maxEntries', giveaway.maxEntries);
+                
+                window.location.href = '/dashboard/<%= guild.id %>/create?' + params.toString();
+            } catch (err) {
+                console.error('Error parsing giveaway data:', err);
+                showSnackbar('Error preparing remake. Please create giveaway manually.', 'error');
+            }
+        }
+        
+        function deleteGiveaway(id, guildId) {
+            showConfirm('Delete Giveaway', 'Are you sure you want to permanently delete this giveaway? This cannot be undone.', () => {
+                fetch(`/dashboard/${guildId}/giveaway/${id}`, { method: 'DELETE' })
+                    .then(r => {
+                        if (!r.ok) {
+                            return r.json().then(data => { throw new Error(data.error || 'Failed to delete giveaway'); });
+                        }
+                        return r.json();
+                    })
+                    .then(() => {
+                        showSnackbar('Giveaway deleted successfully', 'success');
+                        setTimeout(() => location.reload(), 1500);
+                    })
+                    .catch(err => {
+                        console.error('Error:', err);
+                        showSnackbar('Error: ' + err.message, 'error');
+                    });
+            });
+        }
+
+        function closeDetails() {
+            document.getElementById('detailsModal').classList.remove('active');
+        }
+
+        document.getElementById('detailsModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'detailsModal') {
+                closeDetails();
+            }
+        });
+    </script>
+    <script src="/js/notifications.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+<!-- Snackbar Notification -->
+<div id="snackbar" class="snackbar"></div>
+
+<!-- Modal Popup -->
+<div id="modalOverlay" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">Modal Title</h3>
+            <button type="button" class="modal-close" onclick="closeModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="modal-body" id="modalBody">
+            <!-- Dynamic content -->
+        </div>
+        <div class="modal-footer" id="modalFooter">
+            <button type="button" class="btn btn-secondary" id="modalCancelBtn" onclick="closeModal()">Cancel</button>
+            <button type="button" class="btn btn-primary" id="modalConfirmBtn" onclick="confirmModal()">Confirm</button>
+        </div>
+    </div>
+</div>

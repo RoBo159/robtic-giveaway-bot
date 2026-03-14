@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <title>Settings - <%= guild.name %> | Giveaway</title>
+    <link rel="stylesheet" href="/css/settings.css">
+</head>
+<body class="dark">
+    <%- include('partials/navbar', { user: user, guild: guild, page: 'settings', allGuilds: allGuilds }) %>
+
+    <div class="main-content">
+        <div class="back-button">
+            <a href="/dashboard/<%= guild.id %>" class="btn-back">
+                <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+
+        <h1 class="text-2xl font-bold mb-6">Server Settings</h1>
+        
+        <div class="card">
+            <form action="/dashboard/<%= guild.id %>/settings" method="POST" class="settings-form" id="settingsForm">
+                
+                <!-- DM Winners Section -->
+                <div class="settings-section">
+                    <div class="settings-label">
+                        <h3>Send DM to Winners <span class="setting-tooltip" data-tooltip="Automatically send a direct message to the winners when they win a giveaway"><i class="fa-solid fa-circle-info"></i></span></h3>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle">
+                            <input type="checkbox" id="dmWinnersCheckbox" onchange="toggleDMMessage()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- DM Winners Message -->
+                <div class="settings-section" id="dmMessageSection" style="display: none;">
+                    <div class="settings-label">
+                        <h3>DM Message to Winners <span class="setting-tooltip" data-tooltip="Customize the message sent to winners. Click info button for available variables."><i class="fa-solid fa-circle-info"></i></span> <button type="button" class="info-btn" onclick="showVariablesModal()"><i class="fa-solid fa-code"></i></button></h3>
+                    </div>
+                    <div class="toggle-wrapper">
+                        <textarea name="dmWinnersMessage" id="dmMessageInput" class="input settings-textarea" style="width: 100%;"><%= settings.dmWinnersMessage %></textarea>
+                        <p class="helper-text">Variables: {user}, {prize}, {guildName}, {endTime}</p>
+                    </div>
+                </div>
+
+                <!-- Join Message Section -->
+                <div class="settings-section">
+                    <div class="settings-label">
+                        <h3>Join Notification Message <span class="setting-tooltip" data-tooltip="Send a confirmation message when a user enters the giveaway"><i class="fa-solid fa-circle-info"></i></span> <button type="button" class="info-btn" onclick="showVariablesModal()"><i class="fa-solid fa-code"></i></button></h3>
+                    </div>
+                    <div class="toggle-wrapper">
+                        <textarea name="joinMessage" id="joinMessageInput" class="input settings-textarea" style="width: 100%;"><%= settings.joinMessage %></textarea>
+                        <p class="helper-text">Leave empty to disable. Variables: {user}, {prize}, {guildName}</p>
+                    </div>
+                </div>
+
+                <!-- Already in Giveaway Message -->
+                <div class="settings-section">
+                    <div class="settings-label">
+                        <h3>Already in Giveaway Message <span class="setting-tooltip" data-tooltip="Message shown when user tries to enter again (button giveaway only)"><i class="fa-solid fa-circle-info"></i></span> <button type="button" class="info-btn" onclick="showVariablesModal()"><i class="fa-solid fa-code"></i></button></h3>
+                    </div>
+                    <div class="toggle-wrapper">
+                        <textarea name="alreadyInGiveawayMessage" id="alreadyInMessageInput" class="input settings-textarea" style="width: 100%;"><%= settings.alreadyInGiveawayMessage %></textarea>
+                        <p class="helper-text">Variables: {user}, {prize}, {guildName}</p>
+                    </div>
+                </div>
+
+                <!-- Auto Delete Ended Giveaways -->
+                <div class="settings-section">
+                    <div class="settings-label">
+                        <h3>Auto-Delete Ended Giveaways <span class="setting-tooltip" data-tooltip="Automatically delete giveaway messages after they end"><i class="fa-solid fa-circle-info"></i></span></h3>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle">
+                            <input type="checkbox" id="autoDeleteCheckbox">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Logging Channel -->
+                <div class="settings-section">
+                    <div class="settings-label">
+                        <h3>Enable Logging <span class="setting-tooltip" data-tooltip="Log all giveaway events (start, end, winner) to a specific channel"><i class="fa-solid fa-circle-info"></i></span></h3>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle">
+                            <input type="checkbox" id="enableLoggingCheckbox" onchange="toggleLoggingChannel()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Logging Channel Selection -->
+                <div class="settings-section" id="loggingChannelSection" style="display: none;">
+                    <div class="settings-label">
+                        <h3>Select Logging Channel <span class="setting-tooltip" data-tooltip="Choose which channel to send giveaway logs to"><i class="fa-solid fa-circle-info"></i></span></h3>
+                    </div>
+                    <div class="toggle-wrapper">
+                        <select name="loggingChannelId" id="loggingChannelSelect" class="input settings-select">
+                            <option value="">-- Select a channel --</option>
+                            <% channels.forEach(channel => { %>
+                                <option value="<%= channel.id %>" <%= settings.loggingChannelId === channel.id ? 'selected' : '' %>>
+                                    # <%= channel.name %>
+                                </option>
+                            <% }) %>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Mention on Giveaway Start -->
+                <div class="settings-section">
+                    <div class="settings-label">
+                        <h3>Mention on Giveaway Start <span class="setting-tooltip" data-tooltip="Send a ping when a giveaway starts"><i class="fa-solid fa-circle-info"></i></span></h3>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle">
+                            <input type="checkbox" id="mentionEnabledCheckbox" onchange="toggleMentionOptions()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Mention Options -->
+                <div class="settings-section" id="mentionOptionsSection" style="display: none;">
+                    <div class="settings-label">
+                        <h3>Mention Type <span class="setting-tooltip" data-tooltip="Choose who to mention (@everyone, @here, or a specific role)"><i class="fa-solid fa-circle-info"></i></span></h3>
+                    </div>
+                    <div class="toggle-wrapper">
+                        <select name="mentionType" id="mentionTypeSelect" class="input settings-select" onchange="toggleMentionRole()">
+                            <option value="everyone" <%= settings.mentionType === 'everyone' ? 'selected' : '' %>>@everyone</option>
+                            <option value="here" <%= settings.mentionType === 'here' ? 'selected' : '' %>>@here</option>
+                            <option value="role" <%= settings.mentionType === 'role' ? 'selected' : '' %>>Specific Role</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Mention Role Selection -->
+                <div class="settings-section" id="mentionRoleSection" style="display: none;">
+                    <div class="settings-label">
+                        <h3>Select Role to Mention <span class="setting-tooltip" data-tooltip="This role will be mentioned when giveaways start"><i class="fa-solid fa-circle-info"></i></span></h3>
+                    </div>
+                    <div class="toggle-wrapper">
+                        <select name="mentionRoleId" id="mentionRoleSelect" class="input settings-select">
+                            <option value="">-- Select a role --</option>
+                            <% if (typeof roles !== 'undefined') { %>
+                                <% roles.forEach(role => { %>
+                                    <option value="<%= role.id %>" <%= settings.mentionRoleId === role.id ? 'selected' : '' %>>
+                                        @<%= role.name %>
+                                    </option>
+                                <% }) %>
+                            <% } %>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Ended Giveaway Message -->
+                <div class="settings-section">
+                    <div class="settings-label">
+                        <h3>Ended Giveaway Message <span class="setting-tooltip" data-tooltip="Message sent when a giveaway ends and winners are announced"><i class="fa-solid fa-circle-info"></i></span> <button type="button" class="info-btn" onclick="showVariablesModal()"><i class="fa-solid fa-code"></i></button></h3>
+                    </div>
+                    <div class="toggle-wrapper">
+                        <textarea name="endedGiveawayMessage" id="endedGiveawayMessageInput" class="input settings-textarea" style="width: 100%;"><%= settings.endedGiveawayMessage %></textarea>
+                        <p class="helper-text">Variables: {user}, {prize}, {guildName}, {endTime}, {winners}</p>
+                    </div>
+                </div>
+
+                <!-- Ended Embed Customization -->
+                <div class="settings-section settings-header-section">
+                    <div class="settings-label">
+                        <h3><i class="fa-solid fa-palette"></i> Ended Embed Appearance</h3>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-label">
+                        <h3>Ended Embed Title <span class="setting-tooltip" data-tooltip="The title shown on the embed when a giveaway ends"><i class="fa-solid fa-circle-info"></i></span></h3>
+                    </div>
+                    <div class="toggle-wrapper">
+                        <input type="text" name="endedEmbedTitle" id="endedEmbedTitleInput" class="input" style="width: 100%;" value="<%= settings.endedEmbedTitle || '🎉 Giveaway Ended!' %>">
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-label">
+                        <h3>Ended Embed Description <span class="setting-tooltip" data-tooltip="The description shown on the embed when a giveaway ends"><i class="fa-solid fa-circle-info"></i></span> <button type="button" class="info-btn" onclick="showVariablesModal()"><i class="fa-solid fa-code"></i></button></h3>
+                    </div>
+                    <div class="toggle-wrapper">
+                        <textarea name="endedEmbedDescription" id="endedEmbedDescriptionInput" class="input settings-textarea" style="width: 100%;"><%= settings.endedEmbedDescription || 'Winner: {winners}\nPrize: {prize}' %></textarea>
+                        <p class="helper-text">Variables: {user}, {prize}, {winners}, {guildName}, {endTime}</p>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-label">
+                        <h3>Ended Embed Color <span class="setting-tooltip" data-tooltip="The color of the embed border when a giveaway ends"><i class="fa-solid fa-circle-info"></i></span></h3>
+                    </div>
+                    <div class="toggle-wrapper">
+                        <div class="color-picker-row">
+                            <input type="color" name="endedEmbedColor" id="endedEmbedColorInput" class="color-input" value="<%= settings.endedEmbedColor || '#808080' %>">
+                            <span class="color-value" id="endedColorValue"><%= settings.endedEmbedColor || '#808080' %></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hide inputs for form submission -->
+                <input type="hidden" name="dmWinners" id="dmWinnersHidden" value="false">
+                <input type="hidden" name="autoDeleteEndedGiveaways" id="autoDeleteHidden" value="false">
+                <input type="hidden" name="enableLogging" id="enableLoggingHidden" value="false">
+                <input type="hidden" name="mentionEnabled" id="mentionEnabledHidden" value="false">
+
+                <!-- Save Button -->
+                <div class="settings-footer" id="saveFooter" style="display: none;">
+                    <button type="submit" class="btn btn-primary w-full">
+                        <i class="fa-solid fa-check"></i> Save Settings
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const dmCheckbox = document.getElementById('dmWinnersCheckbox');
+        const autoDeleteCheckbox = document.getElementById('autoDeleteCheckbox');
+        const enableLoggingCheckbox = document.getElementById('enableLoggingCheckbox');
+        const mentionEnabledCheckbox = document.getElementById('mentionEnabledCheckbox');
+        const mentionTypeSelect = document.getElementById('mentionTypeSelect');
+        const dmMessageSection = document.getElementById('dmMessageSection');
+        const loggingChannelSection = document.getElementById('loggingChannelSection');
+        const mentionOptionsSection = document.getElementById('mentionOptionsSection');
+        const mentionRoleSection = document.getElementById('mentionRoleSection');
+        const settingsForm = document.getElementById('settingsForm');
+        const saveFooter = document.getElementById('saveFooter');
+
+        // Store initial values for change tracking
+        const initialValues = {
+            dmWinners: <%= settings.dmWinners ? 'true' : 'false' %>,
+            autoDelete: <%= settings.autoDeleteEndedGiveaways ? 'true' : 'false' %>,
+            enableLogging: <%= settings.enableLogging ? 'true' : 'false' %>,
+            mentionEnabled: <%= settings.mentionEnabled ? 'true' : 'false' %>,
+            mentionType: '<%= settings.mentionType || "everyone" %>',
+            mentionRoleId: '<%= settings.mentionRoleId || "" %>',
+            loggingChannelId: '<%= settings.loggingChannelId || "" %>',
+            dmWinnersMessage: document.getElementById('dmMessageInput')?.value || '',
+            joinMessage: document.getElementById('joinMessageInput')?.value || '',
+            alreadyInGiveawayMessage: document.getElementById('alreadyInMessageInput')?.value || '',
+            endedGiveawayMessage: document.getElementById('endedGiveawayMessageInput')?.value || '',
+            endedEmbedTitle: document.getElementById('endedEmbedTitleInput')?.value || '',
+            endedEmbedDescription: document.getElementById('endedEmbedDescriptionInput')?.value || '',
+            endedEmbedColor: document.getElementById('endedEmbedColorInput')?.value || '#808080'
+        };
+
+        // Check for changes and show/hide save button
+        function checkForChanges() {
+            const hasChanges = 
+                dmCheckbox.checked !== initialValues.dmWinners ||
+                autoDeleteCheckbox.checked !== initialValues.autoDelete ||
+                enableLoggingCheckbox.checked !== initialValues.enableLogging ||
+                mentionEnabledCheckbox.checked !== initialValues.mentionEnabled ||
+                mentionTypeSelect.value !== initialValues.mentionType ||
+                document.getElementById('mentionRoleSelect')?.value !== initialValues.mentionRoleId ||
+                document.getElementById('loggingChannelSelect')?.value !== initialValues.loggingChannelId ||
+                document.getElementById('dmMessageInput')?.value !== initialValues.dmWinnersMessage ||
+                document.getElementById('joinMessageInput')?.value !== initialValues.joinMessage ||
+                document.getElementById('alreadyInMessageInput')?.value !== initialValues.alreadyInGiveawayMessage ||
+                document.getElementById('endedGiveawayMessageInput')?.value !== initialValues.endedGiveawayMessage ||
+                document.getElementById('endedEmbedTitleInput')?.value !== initialValues.endedEmbedTitle ||
+                document.getElementById('endedEmbedDescriptionInput')?.value !== initialValues.endedEmbedDescription ||
+                document.getElementById('endedEmbedColorInput')?.value !== initialValues.endedEmbedColor;
+            
+            saveFooter.style.display = hasChanges ? 'block' : 'none';
+        }
+
+        // Add change listeners to all form elements
+        settingsForm.querySelectorAll('input, textarea, select').forEach(el => {
+            el.addEventListener('change', checkForChanges);
+            el.addEventListener('input', checkForChanges);
+        });
+
+        // Update color value display
+        const endedColorInput = document.getElementById('endedEmbedColorInput');
+        const endedColorValue = document.getElementById('endedColorValue');
+        if (endedColorInput && endedColorValue) {
+            endedColorInput.addEventListener('input', () => {
+                endedColorValue.textContent = endedColorInput.value;
+            });
+        }
+
+        // Initialize checkboxes from values
+        dmCheckbox.checked = <%= settings.dmWinners ? 'true' : 'false' %>;
+        autoDeleteCheckbox.checked = <%= settings.autoDeleteEndedGiveaways ? 'true' : 'false' %>;
+        enableLoggingCheckbox.checked = <%= settings.enableLogging ? 'true' : 'false' %>;
+        mentionEnabledCheckbox.checked = <%= settings.mentionEnabled ? 'true' : 'false' %>;
+
+        // Show/hide DM message section
+        function toggleDMMessage() {
+            dmMessageSection.style.display = dmCheckbox.checked ? 'grid' : 'none';
+        }
+
+        // Show/hide logging channel section
+        function toggleLoggingChannel() {
+            loggingChannelSection.style.display = enableLoggingCheckbox.checked ? 'grid' : 'none';
+        }
+
+        // Show/hide mention options
+        function toggleMentionOptions() {
+            mentionOptionsSection.style.display = mentionEnabledCheckbox.checked ? 'grid' : 'none';
+            if (mentionEnabledCheckbox.checked) {
+                toggleMentionRole();
+            } else {
+                mentionRoleSection.style.display = 'none';
+            }
+        }
+
+        // Show/hide mention role selector
+        function toggleMentionRole() {
+            mentionRoleSection.style.display = mentionTypeSelect.value === 'role' ? 'grid' : 'none';
+        }
+
+        // Update hidden field values on form submit
+        settingsForm.addEventListener('submit', (e) => {
+            document.getElementById('dmWinnersHidden').value = dmCheckbox.checked ? 'true' : 'false';
+            document.getElementById('autoDeleteHidden').value = autoDeleteCheckbox.checked ? 'true' : 'false';
+            document.getElementById('enableLoggingHidden').value = enableLoggingCheckbox.checked ? 'true' : 'false';
+            document.getElementById('mentionEnabledHidden').value = mentionEnabledCheckbox.checked ? 'true' : 'false';
+        });
+
+        // Initialize visibility
+        toggleDMMessage();
+        toggleLoggingChannel();
+        toggleMentionOptions();
+
+        // Variables Modal
+        function showVariablesModal() {
+            document.getElementById('variablesModal').style.display = 'flex';
+        }
+
+        function hideVariablesModal() {
+            document.getElementById('variablesModal').style.display = 'none';
+        }
+
+        // Close modal on backdrop click
+        document.getElementById('variablesModal')?.addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideVariablesModal();
+            }
+        });
+    </script>
+
+    <!-- Variables Info Modal -->
+    <div id="variablesModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content variables-modal">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-code"></i> Available Variables</h3>
+                <button type="button" class="modal-close" onclick="hideVariablesModal()">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p style="color: var(--muted-foreground); margin-bottom: 1rem;">Use these variables in your message templates. They will be replaced with actual values when the message is sent.</p>
+                
+                <div class="variables-list">
+                    <div class="variable-item">
+                        <code>{user}</code>
+                        <span>Mention the user who triggered the action</span>
+                    </div>
+                    <div class="variable-item">
+                        <code>{prize}</code>
+                        <span>The giveaway prize name</span>
+                    </div>
+                    <div class="variable-item">
+                        <code>{guildName}</code>
+                        <span>The server name</span>
+                    </div>
+                    <div class="variable-item">
+                        <code>{endTime}</code>
+                        <span>When the giveaway ends (relative time)</span>
+                    </div>
+                    <div class="variable-item">
+                        <code>{winners}</code>
+                        <span>Number of winners</span>
+                    </div>
+                </div>
+
+                <h4 style="margin-top: 1.5rem; margin-bottom: 0.75rem; color: var(--foreground);">Advanced Variables</h4>
+                <div class="variables-list">
+                    <div class="variable-item">
+                        <code>{#channelid}</code>
+                        <span>Mention a channel (replace <em>channelid</em> with actual ID)</span>
+                    </div>
+                    <div class="variable-item">
+                        <code>{&roleid}</code>
+                        <span>Mention a role (replace <em>roleid</em> with actual ID)</span>
+                    </div>
+                    <div class="variable-item">
+                        <code>{@userid}</code>
+                        <span>Mention a specific user (replace <em>userid</em> with actual ID)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .info-btn {
+            background: transparent;
+            border: none;
+            color: var(--muted-foreground);
+            cursor: pointer;
+            padding: 0 0.25rem;
+            font-size: 0.875rem;
+            transition: color 0.2s;
+        }
+        .info-btn:hover {
+            color: var(--primary);
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .variables-modal {
+            background: rgba(var(--background-rgb), 0.95);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(var(--primary-rgb), 0.2);
+            border-radius: 1rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid rgba(var(--primary-rgb), 0.1);
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.125rem;
+            color: var(--foreground);
+        }
+        
+        .modal-header h3 i {
+            color: var(--primary);
+            margin-right: 0.5rem;
+        }
+        
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--muted-foreground);
+            cursor: pointer;
+            font-size: 1.25rem;
+            padding: 0.25rem;
+            transition: color 0.2s;
+        }
+        
+        .modal-close:hover {
+            color: var(--foreground);
+        }
+        
+        .modal-body {
+            padding: 1.5rem;
+        }
+        
+        .variables-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .variable-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 0.75rem;
+            background: rgba(var(--primary-rgb), 0.05);
+            border-radius: 0.5rem;
+            border: 1px solid rgba(var(--primary-rgb), 0.1);
+        }
+        
+        .variable-item code {
+            background: rgba(var(--primary-rgb), 0.2);
+            color: var(--primary);
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-family: monospace;
+            font-size: 0.875rem;
+            white-space: nowrap;
+        }
+        
+        .variable-item span {
+            color: var(--muted-foreground);
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+        
+        .variable-item span em {
+            color: var(--foreground);
+            font-style: normal;
+        }
+    </style>
+</body>
+</html>

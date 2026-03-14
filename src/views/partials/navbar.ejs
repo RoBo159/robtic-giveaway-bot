@@ -1,0 +1,118 @@
+<nav class="navbar">
+    <div class="navbar-container">
+        <a href="/" class="navbar-brand">
+            <i class="fa-solid fa-gift"></i>
+            <span>Giveaway</span>
+        </a>
+
+        <% if (page && guild && typeof guild !== 'undefined') { %>
+            <div class="server-switcher">
+                <div class="navbar-title">
+                    <% if (guild.icon) { %>
+                        <img src="https://cdn.discordapp.com/icons/<%= guild.id %>/<%= guild.icon %>.png" alt="Guild" class="navbar-guild-icon">
+                    <% } else { %>
+                        <div class="navbar-guild-icon-placeholder">
+                            <%= guild.name.charAt(0).toUpperCase() %>
+                        </div>
+                    <% } %>
+                    <span><%= guild.name %></span>
+                </div>
+
+                <% if (typeof allGuilds !== 'undefined' && allGuilds) { %>
+                <div class="server-switcher-dropdown">
+                    <% const activeGuilds = allGuilds.filter(g => g.botIn); %>
+                    <% const inactiveGuilds = allGuilds.filter(g => !g.botIn); %>
+                    
+                    <% if (activeGuilds.length > 0) { %>
+                    <div class="server-section-header">
+                        <span class="status-dot active"></span>
+                        Bot Active
+                    </div>
+                    <% activeGuilds.forEach(g => { %>
+                    <a href="/dashboard/<%= g.id %>" class="server-list-item <%= g.id === guild.id ? 'current' : '' %>">
+                        <% if (g.icon) { %>
+                            <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.png" alt="<%= g.name %>">
+                        <% } else { %>
+                            <div class="server-placeholder"><%= g.name.charAt(0) %></div>
+                        <% } %>
+                        <span><%= g.name %></span>
+                    </a>
+                    <% }); %>
+                    <% } %>
+                    
+                    <% if (inactiveGuilds.length > 0) { %>
+                    <div class="server-section-header">
+                        <span class="status-dot inactive"></span>
+                        Bot Not Active
+                    </div>
+                    <% inactiveGuilds.forEach(g => { %>
+                    <a href="/dashboard/<%= g.id %>" class="server-list-item">
+                        <% if (g.icon) { %>
+                            <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.png" alt="<%= g.name %>">
+                        <% } else { %>
+                            <div class="server-placeholder"><%= g.name.charAt(0) %></div>
+                        <% } %>
+                        <span><%= g.name %></span>
+                    </a>
+                    <% }); %>
+                    <% } %>
+                </div>
+                <% } %>
+            </div>
+
+            <div class="navbar-menu">
+                <a href="/dashboard/<%= guild.id %>/create" class="navbar-link <%= page === 'create' ? 'active' : '' %>">
+                    <i class="fa-solid fa-gift"></i>
+                    <span>Create</span>
+                </a>
+                <a href="/dashboard/<%= guild.id %>/logs" class="navbar-link <%= page === 'logs' ? 'active' : '' %>">
+                    <i class="fa-solid fa-list-ul"></i>
+                    <span>Logs</span>
+                </a>
+                <a href="/dashboard/<%= guild.id %>/settings" class="navbar-link <%= page === 'settings' ? 'active' : '' %>">
+                    <i class="fa-solid fa-sliders"></i>
+                    <span>Settings</span>
+                </a>
+            </div>
+        <% } %>
+
+        <div class="navbar-actions">
+            <% if (user) { %>
+                <div class="navbar-user">
+                    <% 
+                        // Fix avatar URL - handle missing avatar gracefully
+                        const avatarId = user.avatar;
+                        const userId = user.discordId || user.id;
+                        let avatarUrl;
+                        if (avatarId) {
+                            avatarUrl = `https://cdn.discordapp.com/avatars/${userId}/${avatarId}.png`;
+                        } else {
+                            // Discord default avatar based on discriminator or id
+                            const defaultNum = parseInt(userId) % 5;
+                            avatarUrl = `https://cdn.discordapp.com/embed/avatars/${defaultNum}.png`;
+                        }
+                    %>
+                    <img src="<%= avatarUrl %>" alt="<%= user.username %>" class="navbar-avatar" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
+                    <div class="navbar-user-menu">
+                        <div class="navbar-user-info">
+                            <strong><%= user.username %></strong>
+                        </div>
+                        <% if (!page || !guild) { %>
+                            <a href="/dashboard" class="navbar-user-link">
+                                <i class="fa-solid fa-gauge"></i> Dashboard
+                            </a>
+                        <% } %>
+                        <a href="/auth/logout" class="navbar-user-link logout">
+                            <i class="fa-solid fa-sign-out-alt"></i> Logout
+                        </a>
+                    </div>
+                </div>
+            <% } else { %>
+                <a href="/auth/discord" class="navbar-login">
+                    <i class="fa-brands fa-discord"></i>
+                    <span>Login</span>
+                </a>
+            <% } %>
+        </div>
+    </div>
+</nav>

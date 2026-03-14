@@ -1,0 +1,86 @@
+<!-- Emoji Picker Component -->
+<div id="emojiPickerModal" class="emoji-picker-modal">
+    <div class="emoji-picker-content">
+        <div class="emoji-picker-header">
+            <input type="text" id="emojiSearch" class="emoji-search-input" placeholder="Search emojis..." oninput="filterEmojis()">
+            <button type="button" class="emoji-picker-close" onclick="closeEmojiPicker()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="emoji-custom-input">
+            <input type="text" id="customEmojiInput" placeholder="Paste custom emoji: <:name:id>">
+            <button type="button" onclick="submitCustomEmoji()" title="Use custom emoji">
+                <i class="fa-solid fa-check"></i>
+            </button>
+        </div>
+        <div class="emoji-picker-body" id="emojiPickerBody">
+            <!-- Server Emojis -->
+            <% if (typeof serverEmojis !== 'undefined' && serverEmojis.length > 0) { %>
+            <div class="emoji-category" id="serverEmojiCategory">
+                <div class="emoji-category-title">Server Emojis</div>
+                <div class="emoji-grid" id="serverEmojiGrid">
+                    <% serverEmojis.forEach(e => { %>
+                    <div class="emoji-item server-emoji" data-emoji-id="<%= e.id %>" data-emoji-name="<%= e.name %>" data-animated="<%= e.animated %>" data-url="<%= e.url %>" onclick="selectServerEmoji('<%= e.id %>', '<%= e.name %>', <%= e.animated %>, '<%= e.url %>')" title=":<%= e.name %>:">
+                        <img src="<%= e.url %>" alt="<%= e.name %>">
+                    </div>
+                    <% }) %>
+                </div>
+            </div>
+            <% } %>
+            
+            <!-- Common Emojis -->
+            <div class="emoji-category" id="commonEmojiCategory">
+                <div class="emoji-category-title">Common</div>
+                <div class="emoji-grid" id="commonEmojiGrid">
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('🎉')">🎉</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('🎁')">🎁</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('🔥')">🔥</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('⭐')">⭐</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('🏆')">🏆</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('💎')">💎</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('🎊')">🎊</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('✨')">✨</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('🎯')">🎯</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('💰')">💰</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('🎮')">🎮</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('🎲')">🎲</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('❤️')">❤️</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('💜')">💜</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('💙')">💙</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('💚')">💚</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('🧡')">🧡</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('💛')">💛</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('🖤')">🖤</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('🤍')">🤍</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('👍')">👍</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('👋')">👋</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('🙌')">🙌</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('✅')">✅</div>
+                </div>
+            </div>
+            
+            <!-- Smileys -->
+            <div class="emoji-category" id="smileyCategory">
+                <div class="emoji-category-title">Smileys</div>
+                <div class="emoji-grid" id="smileyEmojiGrid">
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('😀')">😀</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('😃')">😃</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('😄')">😄</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('😁')">😁</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('😆')">😆</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('😅')">😅</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('🤣')">🤣</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('😂')">😂</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('🙂')">🙂</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('😊')">😊</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('😇')">😇</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('🥰')">🥰</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('😍')">😍</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('🤩')">🤩</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('😘')">😘</div>
+                    <div class="emoji-item unicode-emoji" onclick="selectUnicodeEmoji('😎')">😎</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

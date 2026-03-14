@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <title>Giveaway - Select Server</title>
+    <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body class="dark">
+    <%- include('partials/navbar', { user: user, guild: null, page: 'dashboard' }) %>
+    
+    <div class="container py-8">
+        <div class="dashboard-header">
+            <h1>Select a Server</h1>
+        </div>
+
+        <div class="servers-grid">
+            <% guilds.forEach(guild => { %>
+                <div class="server-card">
+                    <% if (guild.icon) { %>
+                        <img src="https://cdn.discordapp.com/icons/<%= guild.id %>/<%= guild.icon %>.png" alt="Icon" class="server-icon">
+                    <% } else { %>
+                        <div class="server-icon">
+                            <%= guild.name.charAt(0) %>
+                        </div>
+                    <% } %>
+                    <h3 class="server-name"><%= guild.name %></h3>
+                    
+                    <div class="server-status">
+                        <span class="status-indicator <%= guild.botIn ? 'status-online' : 'status-offline' %>"></span>
+                        <%= guild.botIn ? 'Bot Active' : 'Bot Offline' %>
+                    </div>
+                    
+                    <div class="server-actions">
+                        <% if (guild.botIn) { %>
+                            <a href="/dashboard/<%= guild.id %>" class="btn btn-primary">Config Panel</a>
+                        <% } else { %>
+                            <a href="https://discord.com/api/oauth2/authorize?client_id=<%= process.env.CLIENT_ID %>&permissions=8&scope=bot%20applications.commands&guild_id=<%= guild.id %>" class="btn btn-secondary" target="_blank">Add Bot</a>
+                        <% } %>
+                    </div>
+                </div>
+            <% }) %>
+        </div>
+    </div>
+</body>
+</html>

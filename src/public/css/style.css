@@ -1,0 +1,354 @@
+/* Dark Blue Glassmorphism Design System */
+:root, .dark {
+  /* Using Deep Blue (Hue ~265) base */
+  --background: oklch(14% 0.03 265);
+  --foreground: oklch(0.98 0.01 265);
+  --background-rgb: 10, 20, 40;
+
+  /* Vibrant Blue Primary */
+  --primary: oklch(0.6 0.2 265);
+  --primary-rgb: 60, 120, 255;
+  --ring-rgb: 60, 120, 255;
+  --primary-foreground: oklch(0.98 0.01 265);
+
+  --card: oklch(0.2 0.04 265);
+  --card-foreground: oklch(0.98 0.01 265);
+
+  --popover: oklch(0.2 0.04 265);
+  --popover-foreground: oklch(0.98 0.01 265);
+
+  --secondary: oklch(0.28 0.04 265);
+  --secondary-foreground: oklch(0.98 0.01 265);
+  --muted: oklch(0.28 0.04 265);
+  --muted-foreground: oklch(0.7 0.02 265);
+  --accent: oklch(0.28 0.04 265);
+  --accent-foreground: oklch(0.98 0.01 265);
+
+  --destructive: oklch(0.65 0.18 20);
+  --destructive-foreground: oklch(0.98 0.01 265);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.6 0.2 265);
+
+  --radius: 0.75rem;
+
+  --sidebar: oklch(0.2 0.04 265);
+  --sidebar-background: oklch(0.16 0.035 265);
+  --sidebar-foreground: oklch(0.98 0.01 265);
+  --sidebar-primary: oklch(0.6 0.2 265);
+  --sidebar-primary-foreground: oklch(0.98 0.01 265);
+  --sidebar-accent: oklch(0.28 0.04 265);
+  --sidebar-accent-foreground: oklch(0.98 0.01 265);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.6 0.2 265);
+
+  --discord-blurple: oklch(0.55 0.2 270);
+  --discord-green: oklch(0.55 0.15 145);
+  --success: oklch(0.55 0.15 145);
+  --success-foreground: oklch(0.98 0.01 265);
+
+  /* Glassmorphism */
+  --glass-bg: rgba(var(--background-rgb), 0.7);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --blur-amount: 16px;
+}
+
+/* Custom Scrollbar - Global */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) rgba(var(--background-rgb), 0.3);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(var(--background-rgb), 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--primary), var(--secondary));
+  border-radius: 4px;
+  border: 1px solid var(--glass-border);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+ul {
+  list-style: none;
+}
+
+/* Utilities */
+.container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.gap-2 { gap: 0.5rem; }
+.gap-4 { gap: 1rem; }
+.w-full { width: 100%; }
+.h-screen { height: 100vh; }
+.p-4 { padding: 1rem; }
+.p-6 { padding: 1.5rem; }
+.py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.py-8 { padding-top: 2rem; padding-bottom: 2rem; }
+.px-4 { padding-left: 1rem; padding-right: 1rem; }
+.mb-4 { margin-bottom: 1rem; }
+.mb-6 { margin-bottom: 1.5rem; }
+.mb-8 { margin-bottom: 2rem; }
+.mt-4 { margin-top: 1rem; }
+.mt-auto { margin-top: auto; }
+.text-center { text-align: center; }
+.font-bold { font-weight: bold; }
+.text-2xl { font-size: 1.5rem; }
+.text-sm { font-size: 0.875rem; }
+.rounded-lg { border-radius: var(--radius); }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.w-8 { width: 2rem; }
+.h-8 { height: 2rem; }
+.w-5 { width: 1.25rem; }
+.bg-secondary { background-color: var(--secondary); }
+.border-t { border-top: 1px solid var(--border); }
+.border-border { border-color: var(--border); }
+.text-destructive { color: var(--destructive); }
+
+/* Components */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  font-size: 0.875rem;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+  box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+  border-color: var(--border);
+}
+
+.btn-secondary:hover {
+  background-color: var(--accent);
+  border-color: var(--primary);
+}
+
+.btn-destructive {
+  background-color: var(--destructive);
+  color: var(--destructive-foreground);
+}
+
+.btn-destructive:hover {
+  opacity: 0.9;
+}
+
+/* Glassmorphism Card */
+.card {
+  background: rgba(var(--background-rgb), 0.6);
+  backdrop-filter: blur(var(--blur-amount));
+  -webkit-backdrop-filter: blur(var(--blur-amount));
+  color: var(--card-foreground);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--glass-shadow);
+}
+
+.sidebar {
+  width: 250px;
+  background: rgba(var(--background-rgb), 0.8);
+  backdrop-filter: blur(var(--blur-amount));
+  -webkit-backdrop-filter: blur(var(--blur-amount));
+  border-right: 1px solid var(--sidebar-border);
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.25rem;
+  border-radius: var(--radius);
+  color: var(--sidebar-foreground);
+  transition: all 0.2s ease;
+}
+
+.sidebar-link:hover, .sidebar-link.active {
+  background-color: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+}
+
+.sidebar-link svg {
+  margin-right: 0.75rem;
+}
+
+.main-content {
+  padding: 2rem;
+  min-height: 100vh;
+  background-color: var(--background);
+}
+
+.avatar {
+  border-radius: 9999px;
+  width: 2.5rem;
+  height: 2.5rem;
+  overflow: hidden;
+  object-fit: cover;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--input);
+  background-color: rgba(var(--background-rgb), 0.5);
+  color: var(--foreground);
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 2px rgba(var(--ring-rgb), 0.2);
+}
+
+textarea.input {
+  font-family: inherit;
+  resize: vertical;
+}
+
+select.input {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a0a0a0' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2rem;
+}
+
+select.input option {
+  background-color: var(--card);
+  color: var(--foreground);
+}
+
+.label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Grid layout for servers */
+.grid-servers {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.server-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2rem;
+}
+
+.server-icon {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 9999px;
+  margin-bottom: 1rem;
+}
+
+/* Emoji Images - for custom Discord emojis */
+.emoji-img {
+  display: inline-block;
+  vertical-align: middle;
+  object-fit: contain;
+}
+
+.emoji-img-sm {
+  width: 18px;
+  height: 18px;
+}
+
+.emoji-img-md {
+  width: 20px;
+  height: 20px;
+}
+
+.emoji-img-lg {
+  width: 24px;
+  height: 24px;
+}
+
+.emoji-img-xl {
+  width: 32px;
+  height: 32px;
+}
