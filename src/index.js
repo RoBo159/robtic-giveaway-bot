@@ -5,6 +5,7 @@ const session = require('express-session');
 const MongoStore = require('connect-mongo').default;
 const passport = require('passport');
 const path = require('path');
+const pkg = require('../package.json');
 const { client: bot, logGiveawayEvent } = require('./bot');
 
 // Routes
@@ -14,6 +15,7 @@ const indexRoutes = require('./routes/index'); // Home page
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const ASSET_VERSION = process.env.ASSET_VERSION || pkg.version;
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI)
@@ -26,6 +28,12 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+// Cache-bust static assets after deployment.
+app.use((req, res, next) => {
+    res.locals.assetVersion = ASSET_VERSION;
+    next();
+});
 
 app.use(session({
     secret: process.env.SESSION_SECRET || 'secret',

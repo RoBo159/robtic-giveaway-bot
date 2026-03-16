@@ -3,7 +3,7 @@
 <head>
     <%- include('partials/head') %>
     <title>Logs - <%= guild.name %> | Giveaway</title>
-    <link rel="stylesheet" href="/css/logs.css">
+    <link rel="stylesheet" href="/css/logs.css?v=<%= assetVersion %>">
 </head>
 <body class="dark">
     <%- include('partials/navbar', { user: user, guild: guild, page: 'logs', allGuilds: allGuilds }) %>

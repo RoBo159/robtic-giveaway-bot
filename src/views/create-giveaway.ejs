@@ -3,9 +3,9 @@
 <head>
     <%- include('partials/head') %>
     <title>Create Giveaway - <%= guild.name %> | Giveaway</title>
-    <link rel="stylesheet" href="/css/create-giveaway.css">
-    <link rel="stylesheet" href="/css/create-giveaway-tabs.css">
-    <link rel="stylesheet" href="/css/emoji-picker.css">
+    <link rel="stylesheet" href="/css/create-giveaway.css?v=<%= assetVersion %>">
+    <link rel="stylesheet" href="/css/create-giveaway-tabs.css?v=<%= assetVersion %>">
+    <link rel="stylesheet" href="/css/emoji-picker.css?v=<%= assetVersion %>">
 </head>
 <body class="dark">
     <%- include('partials/navbar', { user: user, guild: guild, page: 'create', allGuilds: allGuilds }) %>
