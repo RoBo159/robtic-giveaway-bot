@@ -194,38 +194,84 @@ async function endGiveaway(giveaway) {
       // Fetch original message to edit it (mark as ended)
       try {
         giveawayMessage = await channel.messages.fetch(giveaway.messageId);
-        const { EmbedBuilder } = require("discord.js");
+        const { EmbedBuilder, ButtonBuilder, ActionRowBuilder } = require("discord.js");
+        const path = require("path");
 
-        const oldEmbed = giveawayMessage.embeds[0];
-        const newEmbed = new EmbedBuilder(oldEmbed.data)
-          .setColor("#2F3136") // Dark/Ended color
-          .setTitle(giveaway.endedEmbedTitle || "🎉 Giveaway Ended!")
-          .setDescription(
-            parseTemplate(giveaway.endedEmbedDescription || "Winner: {winners}\nPrize: {prize}", {
-              prize: giveaway.prize,
-              winners: winners.length > 0 ? winners.map((w) => `<@${w}>`).join(", ") : "No winners",
-            }),
-          );
+        // Prepare Template Data
+        const winnerMentions = winners.length > 0 ? winners.map((w) => `<@${w}>`).join(", ") : "No winners";
+        const templateData = {
+            prize: giveaway.prize,
+            winners: winnerMentions,
+            count: winners.length,
+            winnersCount: giveaway.winnersCount,
+            guildName: guild.name,
+            endTime: giveaway.endTime
+        };
 
-        // Disable components/buttons
-        const {
-          ActionRowBuilder,
-          ButtonBuilder,
-          ButtonStyle,
-        } = require("discord.js");
-        if (giveawayMessage.components.length > 0) {
-          const oldRow = giveawayMessage.components[0];
-          const newComponents = oldRow.components.map((c) =>
-            ButtonBuilder.from(c).setDisabled(true),
-          );
-          const newRow = new ActionRowBuilder().addComponents(newComponents);
-          await giveawayMessage.edit({
-            embeds: [newEmbed],
-            components: [newRow],
-          });
+        const endedTitle = parseTemplate(giveaway.endedEmbedTitle || guildConfig.endedEmbedTitle || "🎉 Giveaway Ended!", templateData);
+        const endedDescription = parseTemplate(giveaway.endedEmbedDescription || guildConfig.endedEmbedDescription || "Winner: {winners}\nPrize: {prize}", templateData);
+        const endedColor = giveaway.endedEmbedColor || guildConfig.endedEmbedColor || "#2F3136";
+
+        const newEmbed = new EmbedBuilder(giveawayMessage.embeds[0].data)
+          .setColor(endedColor) 
+          .setTitle(endedTitle)
+          .setDescription(endedDescription)
+          .setThumbnail(null);
+
+        // Handle Image
+        let files = [];
+        
+        if (giveaway.endedEmbedImage) {
+          if (/^https?:\/\//i.test(giveaway.endedEmbedImage)) {
+            newEmbed.setImage(giveaway.endedEmbedImage);
+          } else {
+            const fileName = giveaway.endedEmbedImage.startsWith('/uploads/')
+              ? decodeURIComponent(giveaway.endedEmbedImage.replace('/uploads/', ''))
+              : giveaway.endedEmbedImage;
+            const imagePath = path.join(__dirname, 'public/uploads', fileName);
+            files.push({
+              attachment: imagePath,
+              name: fileName
+            });
+            newEmbed.setImage(`attachment://${fileName}`);
+          }
         } else {
-          await giveawayMessage.edit({ embeds: [newEmbed] });
+            // Keep original image logic? 
+            // If the original embed had an image, and we use `new EmbedBuilder(oldEmbed.data)`, 
+            // it preserves the image URL (if it was an HTTP URL).
+            // If it was an attachment, we might lose it if we don't re-upload or if discord handles it.
+            // Discord usually invalidates attachment URLs on edit if the attachment isn't re-sent or preserved.
+            // If we assume a fresh specific ended appearance, we might just clear it if not specified.
+            // But let's verify if `endedEmbedImage` is null, we probably want NO image or default?
+            // The prompt implies customization. If not set, maybe no image is better for "Ended" state to distinguish.
+            // Unless the user wants it.
+            // For now, if no ended image, I'll remove the image from the embed to be safe/clean.
+            newEmbed.setImage(null);
         }
+
+        // Handle End Behavior (Buttons)
+        const endBehavior = giveaway.endBehavior || 'disable';
+        let components = []; // Default to remove if 'remove' or other issues
+        
+        if (giveawayMessage.components.length > 0) {
+             if (endBehavior === 'disable') {
+                  const oldRow = giveawayMessage.components[0];
+                  const newComponents = oldRow.components.map((c) =>
+                    ButtonBuilder.from(c).setDisabled(true),
+                  );
+                  components = [new ActionRowBuilder().addComponents(newComponents)];
+             } else if (endBehavior === 'keep') {
+                  // Keep components as they are (active)
+                  components = giveawayMessage.components;
+             } 
+             // if 'remove', components is empty array
+        }
+
+        await giveawayMessage.edit({
+            embeds: [newEmbed],
+            components: components,
+            files: files.length > 0 ? files : []
+        });
       } catch (e) {
         console.log("Could not update original message", e);
       }

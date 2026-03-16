@@ -156,6 +156,56 @@
   font-weight: 500;
 }
 
+.settings-savebar {
+  position: fixed;
+  left: 50%;
+  bottom: 1.25rem;
+  transform: translateX(-50%) translateY(120%);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  z-index: 2200;
+  width: min(92vw, 560px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 0.875rem;
+  border-radius: var(--radius);
+  border: 1px solid rgba(var(--primary-rgb), 0.35);
+  background: rgba(10, 14, 23, 0.95);
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.45);
+}
+
+.settings-savebar.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.settings-savebar-text {
+  font-size: 0.8125rem;
+  color: #e5e7eb;
+}
+
+.settings-savebar-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.settings-savebar.shake {
+  animation: settingsSavebarShake 0.35s linear;
+}
+
+@keyframes settingsSavebarShake {
+  0% { transform: translateX(-50%) translateY(0); }
+  20% { transform: translateX(calc(-50% - 5px)) translateY(0); }
+  40% { transform: translateX(calc(-50% + 5px)) translateY(0); }
+  60% { transform: translateX(calc(-50% - 4px)) translateY(0); }
+  80% { transform: translateX(calc(-50% + 4px)) translateY(0); }
+  100% { transform: translateX(-50%) translateY(0); }
+}
+
 @media (max-width: 768px) {
   .settings-section {
     grid-template-columns: 1fr;

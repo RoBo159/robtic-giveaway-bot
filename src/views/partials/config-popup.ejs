@@ -88,40 +88,232 @@
             </div>
 
             <div class="config-section">
-                <label class="config-label">Embed Title</label>
-                <input type="text" name="popupEmbedTitle" id="popupEmbedTitle" value="<%= config.embedTitle || 'New Giveaway!' %>" class="config-input" oninput="updatePopupPreview()">
-            </div>
-
-            <div class="config-section">
-                <div class="config-label-row">
-                    <label class="config-label">Embed Description</label>
-                    <%- include('variables-info') %>
+                <label class="config-label">Giveaway Embed Editor</label>
+                <div class="embed-config-tabs" style="margin: 0 0 0.75rem 0; border-bottom: none; gap: 0.5rem;">
+                    <button type="button" class="tab-btn active" onclick="switchEmbedTab('active')" id="popup-tab-active">Active Embed</button>
+                    <button type="button" class="tab-btn" onclick="switchEmbedTab('ended')" id="popup-tab-ended">Ended Embed</button>
                 </div>
-                <textarea name="popupEmbedDescription" id="popupEmbedDescription" rows="3" class="config-input" oninput="updatePopupPreview()"><%= config.embedDescription || 'React to enter!' %></textarea>
+
+                <div id="active-embed-config" style="display: block;">
+                    <label class="config-label">Active Title</label>
+                    <input type="text" form="createForm" name="embedTitle" id="embedTitleInput" value="<%= config.embedTitle || 'New Giveaway!' %>" class="config-input" oninput="updatePreview()">
+
+                    <label class="config-label" style="margin-top: 0.75rem;">Active Description</label>
+                    <textarea form="createForm" name="embedDescription" id="embedDescriptionInput" rows="4" class="config-input" oninput="updatePreview()"><%= config.embedDescription || 'React to enter!' %></textarea>
+
+                    <label class="config-label" style="margin-top: 0.75rem;">Active Image</label>
+                    <input type="file" form="createForm" name="embedImage" id="embedImageInput" accept="image/*" class="config-input" onchange="previewImage(this, 'active')">
+                </div>
+
+                <div id="ended-embed-config" style="display: none;">
+                    <label class="config-label">Ended Title</label>
+                    <input type="text" form="createForm" name="endedEmbedTitle" id="endedEmbedTitleInput" value="<%= config.endedEmbedTitle || '🎉 Giveaway Ended!' %>" class="config-input" oninput="updatePreview()">
+
+                    <label class="config-label" style="margin-top: 0.75rem;">Ended Description</label>
+                    <textarea form="createForm" name="endedEmbedDescription" id="endedEmbedDescriptionInput" rows="4" class="config-input" oninput="updatePreview()"><%= config.endedEmbedDescription || 'Winner: {winners}\nPrize: {prize}' %></textarea>
+
+                    <label class="config-label" style="margin-top: 0.75rem;">Ended Image</label>
+                    <input type="file" form="createForm" name="endedEmbedImage" id="endedEmbedImageInput" accept="image/*" class="config-input" onchange="previewImage(this, 'ended')">
+
+                    <label class="config-label" style="margin-top: 0.75rem;">End Behavior (Buttons)</label>
+                    <select form="createForm" name="endBehavior" id="endBehaviorSelect" class="config-input" onchange="updatePreview()">
+                        <option value="disable">Disable Buttons</option>
+                        <option value="remove">Remove Buttons</option>
+                        <option value="keep">Keep Buttons (Active)</option>
+                    </select>
+                </div>
             </div>
         </form>
 
         <div class="config-popup-footer">
-            <button type="button" class="btn btn-secondary" onclick="closeConfigPopup()">Cancel</button>
-            <button type="button" class="btn btn-primary" onclick="saveConfigSettings()">
-                <i class="fa-solid fa-check"></i> Apply Settings
-            </button>
+            <span class="config-hint">Changes are tracked automatically.</span>
         </div>
     </div>
 </div>
 
+<div id="configSaveBar" class="config-savebar" role="status" aria-live="polite">
+    <div class="config-savebar-text">You have unsaved giveaway settings changes.</div>
+    <div class="config-savebar-actions">
+        <button type="button" class="btn btn-secondary" onclick="cancelPopupChanges()">Cancel</button>
+        <button type="button" class="btn btn-primary" id="configSaveButton" onclick="saveConfigSettings()">
+            <i class="fa-solid fa-check"></i> Save
+        </button>
+    </div>
+</div>
+
 <script>
+let popupBaselineState = null;
+let popupHasUnsavedChanges = false;
+let popupTrackingReady = false;
+let popupSuppressTracking = false;
+let isSavingConfig = false;
+
+function setConfigSavingState(saving) {
+    isSavingConfig = saving;
+    const saveBtn = document.getElementById('configSaveButton');
+    if (!saveBtn) return;
+    saveBtn.disabled = saving;
+    saveBtn.innerHTML = saving
+        ? '<i class="fa-solid fa-spinner fa-spin"></i> Saving...'
+        : '<i class="fa-solid fa-check"></i> Save';
+}
+
+function getPopupState() {
+    const getChecked = (name, fallback = '') => document.querySelector(`input[name="${name}"]:checked`)?.value || fallback;
+    return {
+        giveawayType: getChecked('popupGiveawayType', 'reaction'),
+        reactionEmoji: document.getElementById('popupReactionEmoji')?.value || '',
+        buttonEmoji: document.getElementById('popupButtonEmoji')?.value || '',
+        buttonName: document.getElementById('popupButtonName')?.value || '',
+        buttonColor: getChecked('popupButtonColor', 'primary'),
+        embedColor: document.getElementById('popupEmbedColor')?.value || '#0057ff',
+        embedTitle: document.getElementById('embedTitleInput')?.value || '',
+        embedDescription: document.getElementById('embedDescriptionInput')?.value || '',
+        endedEmbedTitle: document.getElementById('endedEmbedTitleInput')?.value || '',
+        endedEmbedDescription: document.getElementById('endedEmbedDescriptionInput')?.value || '',
+        endBehavior: document.getElementById('endBehaviorSelect')?.value || 'disable',
+        embedImageUrl: config.embedImage || '',
+        endedEmbedImageUrl: config.endedEmbedImage || '',
+        embedImageFile: document.getElementById('embedImageInput')?.files?.[0]?.name || '',
+        endedEmbedImageFile: document.getElementById('endedEmbedImageInput')?.files?.[0]?.name || ''
+    };
+}
+
+function setPopupState(state) {
+    popupSuppressTracking = true;
+    try {
+        const typeInput = document.querySelector(`input[name="popupGiveawayType"][value="${state.giveawayType || 'reaction'}"]`);
+        if (typeInput) typeInput.checked = true;
+
+        const btnColorInput = document.querySelector(`input[name="popupButtonColor"][value="${state.buttonColor || 'primary'}"]`);
+        if (btnColorInput) btnColorInput.checked = true;
+
+        if (document.getElementById('popupReactionEmoji')) document.getElementById('popupReactionEmoji').value = state.reactionEmoji || '';
+        if (document.getElementById('popupButtonEmoji')) document.getElementById('popupButtonEmoji').value = state.buttonEmoji || '';
+        if (document.getElementById('popupButtonName')) document.getElementById('popupButtonName').value = state.buttonName || '';
+        if (document.getElementById('popupEmbedColor')) document.getElementById('popupEmbedColor').value = state.embedColor || '#0057ff';
+        if (document.getElementById('embedTitleInput')) document.getElementById('embedTitleInput').value = state.embedTitle || '';
+        if (document.getElementById('embedDescriptionInput')) document.getElementById('embedDescriptionInput').value = state.embedDescription || '';
+        if (document.getElementById('endedEmbedTitleInput')) document.getElementById('endedEmbedTitleInput').value = state.endedEmbedTitle || '';
+        if (document.getElementById('endedEmbedDescriptionInput')) document.getElementById('endedEmbedDescriptionInput').value = state.endedEmbedDescription || '';
+        if (document.getElementById('endBehaviorSelect')) document.getElementById('endBehaviorSelect').value = state.endBehavior || 'disable';
+
+        // File inputs cannot restore a prior selected file; cancel discards pending file selection.
+        if (document.getElementById('embedImageInput')) document.getElementById('embedImageInput').value = '';
+        if (document.getElementById('endedEmbedImageInput')) document.getElementById('endedEmbedImageInput').value = '';
+
+        if (typeof initPopupEmojis === 'function') initPopupEmojis();
+        if (typeof updatePopupPreview === 'function') updatePopupPreview();
+        if (typeof updatePreview === 'function') updatePreview();
+    } finally {
+        popupSuppressTracking = false;
+    }
+}
+
+function setPopupDirty(dirty) {
+    popupHasUnsavedChanges = dirty;
+    const bar = document.getElementById('configSaveBar');
+    if (!bar) return;
+
+    if (dirty) {
+        bar.classList.add('show');
+    } else {
+        bar.classList.remove('show', 'shake');
+    }
+}
+
+function shakeSaveBar() {
+    const bar = document.getElementById('configSaveBar');
+    if (!bar) return;
+    bar.classList.remove('shake');
+    void bar.offsetWidth;
+    bar.classList.add('shake');
+}
+
+function markPopupDirtyFromInputs() {
+    if (popupSuppressTracking || !popupBaselineState) return;
+    const now = getPopupState();
+    const dirty = JSON.stringify(now) !== JSON.stringify(popupBaselineState);
+    const becameDirty = dirty && !popupHasUnsavedChanges;
+    setPopupDirty(dirty);
+    if (becameDirty) shakeSaveBar();
+}
+
+function initPopupChangeTracking() {
+    if (popupTrackingReady) return;
+    popupTrackingReady = true;
+
+    const trackedSelectors = [
+        '#configPopupForm input',
+        '#configPopupForm textarea',
+        '#configPopupForm select',
+        '#embedTitleInput',
+        '#embedDescriptionInput',
+        '#endedEmbedTitleInput',
+        '#endedEmbedDescriptionInput',
+        '#endBehaviorSelect',
+        '#embedImageInput',
+        '#endedEmbedImageInput'
+    ];
+
+    trackedSelectors.forEach((selector) => {
+        document.querySelectorAll(selector).forEach((el) => {
+            el.addEventListener('input', markPopupDirtyFromInputs);
+            el.addEventListener('change', markPopupDirtyFromInputs);
+        });
+    });
+
+    document.addEventListener('click', (e) => {
+        const link = e.target.closest('a[href]');
+        if (!link || link.target === '_blank' || link.hasAttribute('download')) return;
+        if (!popupHasUnsavedChanges) return;
+        e.preventDefault();
+        shakeSaveBar();
+        alert('There are unsaved changes. Please Save or Cancel first.');
+    });
+
+    window.addEventListener('beforeunload', (e) => {
+        if (!popupHasUnsavedChanges) return;
+        e.preventDefault();
+        e.returnValue = 'There are unsaved changes you have not saved.';
+    });
+}
+
 function openConfigPopup() {
+    initPopupChangeTracking();
+    if (!popupBaselineState) {
+        popupBaselineState = getPopupState();
+    }
     document.getElementById('configPopupOverlay').classList.add('show');
     document.body.style.overflow = 'hidden';
     initPopupEmojis();
+    if (typeof switchEmbedTab === 'function') {
+        switchEmbedTab(window.currentTab || 'active');
+    }
     updatePopupPreview();
 }
 
-function closeConfigPopup(event) {
+function closeConfigPopup(event, forceClose = false) {
     if (event && event.target !== event.currentTarget) return;
+    if (!forceClose && popupHasUnsavedChanges) {
+        shakeSaveBar();
+        showSnackbar('Unsaved changes. Use Save or Cancel in the bar.', 'warning');
+        return;
+    }
     document.getElementById('configPopupOverlay').classList.remove('show');
     document.body.style.overflow = '';
+}
+
+function cancelPopupChanges() {
+    if (!popupBaselineState) {
+        setPopupDirty(false);
+        closeConfigPopup(null, true);
+        return;
+    }
+
+    setPopupState(popupBaselineState);
+    setPopupDirty(false);
+    closeConfigPopup(null, true);
 }
 
 function initPopupEmojis() {
@@ -141,44 +333,88 @@ function updatePopupPreview() {
     // Update color value display
     const colorInput = document.getElementById('popupEmbedColor');
     document.getElementById('popupColorValue').textContent = colorInput.value;
+
+    markPopupDirtyFromInputs();
 }
 
 function saveConfigSettings() {
-    const formData = {
+    if (isSavingConfig) {
+        shakeSaveBar();
+        return;
+    }
+
+    const payload = {
         giveawayType: document.querySelector('input[name="popupGiveawayType"]:checked')?.value || 'reaction',
         reactionEmoji: document.getElementById('popupReactionEmoji').value,
         buttonEmoji: document.getElementById('popupButtonEmoji').value,
         buttonName: document.getElementById('popupButtonName').value,
         buttonColor: document.querySelector('input[name="popupButtonColor"]:checked')?.value || 'primary',
         embedColor: document.getElementById('popupEmbedColor').value,
-        embedTitle: document.getElementById('popupEmbedTitle').value,
-        embedDescription: document.getElementById('popupEmbedDescription').value
+        embedTitle: document.getElementById('embedTitleInput')?.value || 'New Giveaway!',
+        embedDescription: document.getElementById('embedDescriptionInput')?.value || 'React to enter!',
+        endedEmbedTitle: document.getElementById('endedEmbedTitleInput')?.value || '🎉 Giveaway Ended!',
+        endedEmbedDescription: document.getElementById('endedEmbedDescriptionInput')?.value || 'Winner: {winners}\nPrize: {prize}',
+        endBehavior: document.getElementById('endBehaviorSelect')?.value || 'disable',
+        embedImage: config.embedImage || '',
+        endedEmbedImage: config.endedEmbedImage || ''
     };
+
+    const multipart = new FormData();
+    Object.entries(payload).forEach(([key, value]) => multipart.append(key, value));
+
+    const activeFile = document.getElementById('embedImageInput')?.files?.[0];
+    const endedFile = document.getElementById('endedEmbedImageInput')?.files?.[0];
+    if (activeFile) multipart.append('embedImage', activeFile);
+    if (endedFile) multipart.append('endedEmbedImage', endedFile);
+
+    setConfigSavingState(true);
     
     // Submit to server
     fetch('/dashboard/<%= guild.id %>/config', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        headers: {
+            'Accept': 'application/json'
+        },
+        body: multipart
     })
-    .then(r => {
-        if (r.redirected) {
-            showSnackbar('Settings saved! Refreshing...', 'success');
-            setTimeout(() => location.reload(), 1000);
-        } else if (r.ok) {
-            showSnackbar('Settings saved!', 'success');
-            // Update local config
-            Object.assign(config, formData);
-            // Update preview
-            updateMainPreview();
-            closeConfigPopup();
-        } else {
+    .then(async (r) => {
+        if (!r.ok) {
             throw new Error('Failed to save settings');
+        }
+
+        const contentType = r.headers.get('content-type') || '';
+        const data = contentType.includes('application/json') ? await r.json().catch(() => ({})) : {};
+        if (data.success === false) {
+            throw new Error('Failed to save settings');
+        }
+
+        // Server save succeeded; UI updates are handled separately to avoid false failed state.
+        showSnackbar('Settings saved!', 'success');
+
+        try {
+            Object.assign(config, payload, data.config || {});
+            const activeInput = document.getElementById('embedImageInput');
+            const endedInput = document.getElementById('endedEmbedImageInput');
+            if (activeInput) activeInput.value = '';
+            if (endedInput) endedInput.value = '';
+            popupBaselineState = getPopupState();
+            setPopupDirty(false);
+            updateMainPreview();
+            if (typeof updatePreview === 'function') {
+                updatePreview();
+            }
+            closeConfigPopup(null, true);
+        } catch (uiError) {
+            console.error('Saved but failed to update preview UI:', uiError);
+            showSnackbar('Saved, but preview update failed. Refresh page.', 'warning');
         }
     })
     .catch(err => {
         console.error(err);
         showSnackbar('Error saving settings', 'error');
+    })
+    .finally(() => {
+        setConfigSavingState(false);
     });
 }
 
@@ -209,4 +445,6 @@ document.addEventListener('keydown', (e) => {
         closeConfigPopup();
     }
 });
+
+window.markPopupDirtyFromInputs = markPopupDirtyFromInputs;
 </script>

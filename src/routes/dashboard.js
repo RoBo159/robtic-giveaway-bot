@@ -3,6 +3,72 @@ const router = express.Router();
 const GuildConfig = require('../models/GuildConfig');
 const Giveaway = require('../models/Giveaway');
 const Template = require('../models/Template');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Configure Multer for file uploads
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const uploadDir = path.join(__dirname, '../public/uploads');
+        if (!fs.existsSync(uploadDir)){
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+const upload = multer({ storage: storage });
+
+function getLocalPublicUploadUrl(fileName) {
+    return `/uploads/${encodeURIComponent(fileName)}`;
+}
+
+async function uploadToFreeImageHost(localPath, originalName, mimeType) {
+    const buffer = await fs.promises.readFile(localPath);
+    const fileName = originalName || path.basename(localPath);
+    const errors = [];
+
+    // Provider 1: 0x0.st
+    try {
+        const form0x0 = new FormData();
+        form0x0.append('file', new Blob([buffer], { type: mimeType || 'application/octet-stream' }), fileName);
+        const response0x0 = await fetch('https://0x0.st', {
+            method: 'POST',
+            body: form0x0,
+        });
+        if (response0x0.ok) {
+            const url = (await response0x0.text()).trim();
+            if (/^https?:\/\//i.test(url)) return url;
+        }
+        errors.push(`0x0.st status ${response0x0.status}`);
+    } catch (e) {
+        errors.push(`0x0.st error: ${e.message}`);
+    }
+
+    // Provider 2: catbox.moe
+    try {
+        const formCatbox = new FormData();
+        formCatbox.append('reqtype', 'fileupload');
+        formCatbox.append('fileToUpload', new Blob([buffer], { type: mimeType || 'application/octet-stream' }), fileName);
+        const responseCatbox = await fetch('https://catbox.moe/user/api.php', {
+            method: 'POST',
+            body: formCatbox,
+        });
+        if (responseCatbox.ok) {
+            const url = (await responseCatbox.text()).trim();
+            if (/^https?:\/\//i.test(url)) return url;
+        }
+        errors.push(`catbox.moe status ${responseCatbox.status}`);
+    } catch (e) {
+        errors.push(`catbox.moe error: ${e.message}`);
+    }
+
+    throw new Error(`All image hosts failed: ${errors.join(' | ')}`);
+}
 
 // Middleware to check if logged in
 function checkAuth(req, res, next) {
@@ -160,7 +226,10 @@ router.get('/:guildId/logs', async (req, res) => {
 });
 
 // Update Config
-router.post('/:guildId/config', async (req, res) => {
+router.post('/:guildId/config', upload.fields([
+    { name: 'embedImage', maxCount: 1 },
+    { name: 'endedEmbedImage', maxCount: 1 }
+]), async (req, res) => {
     const guildId = req.params.guildId;
     const { 
         giveawayType, 
@@ -170,8 +239,40 @@ router.post('/:guildId/config', async (req, res) => {
         embedDescription,
         buttonName,
         buttonEmoji,
-        buttonColor
+        buttonColor,
+        endedEmbedTitle,
+        endedEmbedDescription,
+        endBehavior,
+        embedImage,
+        endedEmbedImage
     } = req.body;
+
+    const existingConfig = await GuildConfig.findOne({ guildId });
+
+    let activeImageUrl = embedImage || existingConfig?.embedImage || null;
+    let endedImageUrl = endedEmbedImage || existingConfig?.endedEmbedImage || null;
+
+    if (req.files?.embedImage?.[0]) {
+        const file = req.files.embedImage[0];
+        try {
+            activeImageUrl = await uploadToFreeImageHost(file.path, file.originalname, file.mimetype);
+            await fs.promises.unlink(file.path).catch(() => null);
+        } catch (error) {
+            console.error('Failed remote upload for active image; using local fallback:', error.message);
+            activeImageUrl = getLocalPublicUploadUrl(file.filename);
+        }
+    }
+
+    if (req.files?.endedEmbedImage?.[0]) {
+        const file = req.files.endedEmbedImage[0];
+        try {
+            endedImageUrl = await uploadToFreeImageHost(file.path, file.originalname, file.mimetype);
+            await fs.promises.unlink(file.path).catch(() => null);
+        } catch (error) {
+            console.error('Failed remote upload for ended image; using local fallback:', error.message);
+            endedImageUrl = getLocalPublicUploadUrl(file.filename);
+        }
+    }
     
     const updatedConfig = {
         giveawayType, 
@@ -179,6 +280,11 @@ router.post('/:guildId/config', async (req, res) => {
         reactionEmoji, 
         embedTitle, 
         embedDescription,
+        embedImage: activeImageUrl,
+        endedEmbedImage: endedImageUrl,
+        endedEmbedTitle: endedEmbedTitle || existingConfig?.endedEmbedTitle || '🎉 Giveaway Ended!',
+        endedEmbedDescription: endedEmbedDescription || existingConfig?.endedEmbedDescription || 'Winner: {winners}\nPrize: {prize}',
+        endBehavior: endBehavior || existingConfig?.endBehavior || 'disable',
         buttonName: buttonName || 'Join Giveaway',
         buttonEmoji: buttonEmoji || '🎉',
         buttonColor: buttonColor || 'primary'
@@ -271,6 +377,10 @@ router.post('/:guildId/settings', async (req, res) => {
         { upsert: true }
     );
 
+    if (req.xhr || req.headers.accept?.includes('application/json')) {
+        return res.json({ success: true });
+    }
+
     res.redirect(`/dashboard/${guildId}/settings`);
 });
 
@@ -302,8 +412,6 @@ router.get('/:guildId/create', async (req, res) => {
         url: e.imageURL()
     }));
 
-    console.log(req.user)
-
     res.render('create-giveaway', { 
         user: req.user, 
         guild, 
@@ -318,15 +426,57 @@ router.get('/:guildId/create', async (req, res) => {
 });
 
 // Create Giveaway Action
-router.post('/:guildId/create', async (req, res) => {
+router.post('/:guildId/create', upload.fields([
+    { name: 'embedImage', maxCount: 1 },
+    { name: 'endedEmbedImage', maxCount: 1 }
+]), async (req, res) => {
     const guildId = req.params.guildId;
-    const { prize, duration, channelId, requiredRole, winnersCount, maxEntries } = req.body;
-    
-    // Simple duration parsing (assuming minutes for demo, user can improve)
-    // In production, use 'ms' package or similar.
-    const endTime = new Date(Date.now() + parseInt(duration) * 60000);
+    const { 
+        prize, 
+        duration, 
+        channelId, 
+        requiredRole, 
+        winnersCount, 
+        maxEntries,
+        embedTitle,
+        embedDescription,
+        endedEmbedTitle,
+        endedEmbedDescription,
+        endBehavior
+    } = req.body;
     
     const config = await GuildConfig.findOne({ guildId }) || {};
+
+    // Process Images
+    let activeImageUrl = config.embedImage || null;
+    let endedImageUrl = config.endedEmbedImage || null;
+    
+    if (req.files) {
+        if (req.files['embedImage'] && req.files['embedImage'][0]) {
+            const file = req.files['embedImage'][0];
+            try {
+                activeImageUrl = await uploadToFreeImageHost(file.path, file.originalname, file.mimetype);
+                await fs.promises.unlink(file.path).catch(() => null);
+            } catch (uploadErr) {
+                console.error('Failed remote upload for active giveaway image; using local fallback:', uploadErr.message);
+                activeImageUrl = getLocalPublicUploadUrl(file.filename);
+            }
+        }
+        if (req.files['endedEmbedImage'] && req.files['endedEmbedImage'][0]) {
+            const file = req.files['endedEmbedImage'][0];
+            try {
+                endedImageUrl = await uploadToFreeImageHost(file.path, file.originalname, file.mimetype);
+                await fs.promises.unlink(file.path).catch(() => null);
+            } catch (uploadErr) {
+                console.error('Failed remote upload for ended giveaway image; using local fallback:', uploadErr.message);
+                endedImageUrl = getLocalPublicUploadUrl(file.filename);
+            }
+        }
+    }
+    
+    // Simple duration parsing (assuming minutes for demo, user can improve)
+    const endTime = new Date(Date.now() + parseInt(duration) * 60000);
+    
     const { parseTemplate } = require('../utils/templateParser');
 
     // Send to Discord
@@ -349,25 +499,64 @@ router.post('/:guildId/create', async (req, res) => {
         winnersCount: parseInt(winnersCount) || 1
     };
     
-    // Parse embed description with template variables
-    let descriptionTemplate = config.embedDescription || 'React to enter!';
+    // Determine Description
+    // Use submitted description or fallback to default
+    let descriptionTemplate = embedDescription || config.embedDescription || 'React to enter!';
     let description = parseTemplate(descriptionTemplate, templateData);
-    description += `\n\n**Prize:** ${prize}\n**Ends:** <t:${Math.floor(endTime.getTime()/1000)}:R>`;
     
-    if (parseInt(winnersCount) > 1) {
+    // Append auto-info only if it doesn't look like the user added it manually?
+    // Or just append it if the user didn't use the specific variables?
+    // User requested "Support variables" so they can likely construct the whole thing.
+    // However, if they just typed "Hello", they might miss the prize info.
+    // For now, let's treat the description as valid.
+    // But for backward compatibility with the user request context "fix the ended giveaway embed make it support variables",
+    // they probably want full control.
+    // We will append critical info ONLY if the description seems "simple" (doesn't contain variable for time/prize).
+    // Or we stick to the previous logic of appending footer info for consistency, 
+    // BUT the previous code appended it unconditionally.
+    // Let's modify slightly: If description doesn't have {endTime} variable (or logic around it), we append the time.
+    
+    // Actually, simply appending is safer for now to ensure info is there.
+    if (!description.includes(prize) && !descriptionTemplate.includes('{prize}')) {
+         description += `\n\n**Prize:** ${prize}`;
+    }
+    // Always append end time if not present, as it's crucial for discord relative time
+    // But we check based on template usage.
+    if (!descriptionTemplate.includes('{duration}') && !descriptionTemplate.includes('{endTime}')) {
+         description += `\n**Ends:** <t:${Math.floor(endTime.getTime()/1000)}:R>`;
+    }
+
+    if (parseInt(winnersCount) > 1 && !descriptionTemplate.includes('{winners}')) {
         description += `\n**Winners:** ${winnersCount}`;
     }
     if (parseInt(maxEntries) > 0) {
         description += `\n**Max Entries:** ${maxEntries}`;
     }
 
+    const title = parseTemplate(embedTitle || config.embedTitle || 'New Giveaway!', templateData);
+    
     const embed = new EmbedBuilder()
-        .setTitle(parseTemplate(config.embedTitle || 'New Giveaway!', templateData))
+        .setTitle(title)
         .setDescription(description)
-        .setColor(config.embedColor || '#00FF00');
+        .setColor(config.embedColor || '#00FF00')
+        .setThumbnail(null);
 
     if (requiredRole) {
         embed.addFields({ name: 'Requirement', value: `<@&${requiredRole}>` });
+    }
+    
+    const attachmentFiles = [];
+    if (activeImageUrl) {
+        if (/^https?:\/\//i.test(activeImageUrl)) {
+            embed.setImage(activeImageUrl);
+        } else if (activeImageUrl.startsWith('/uploads/')) {
+            const fileName = decodeURIComponent(activeImageUrl.replace('/uploads/', ''));
+            embed.setImage(`attachment://${fileName}`);
+            attachmentFiles.push({
+                attachment: path.join(__dirname, '../public/uploads', fileName),
+                name: fileName
+            });
+        }
     }
 
     try {
@@ -395,6 +584,11 @@ router.post('/:guildId/create', async (req, res) => {
             }
         }
         
+        const messageOptions = { embeds: [embed] };
+        if (attachmentFiles.length > 0) {
+            messageOptions.files = attachmentFiles;
+        }
+        
         if (config.giveawayType === 'button') {
             const joinBtn = new ButtonBuilder()
                 .setCustomId('join_giveaway')
@@ -407,10 +601,11 @@ router.post('/:guildId/create', async (req, res) => {
             }
 
             const row = new ActionRowBuilder().addComponents(joinBtn);
-            message = await channel.send({ embeds: [embed], components: [row] });
+            messageOptions.components = [row];
+            message = await channel.send(messageOptions);
         } else {
             // Reaction
-            message = await channel.send({ embeds: [embed] });
+            message = await channel.send(messageOptions);
             await message.react(config.reactionEmoji || '🎉');
         }
 
@@ -423,10 +618,21 @@ router.post('/:guildId/create', async (req, res) => {
             maxEntries: parseInt(maxEntries) || 0,
             endTime,
             hostId: req.user.discordId,
-            requiredRole: requiredRole || null
+            requiredRole: requiredRole || null,
+            
+            // New Config Fields
+            embedTitle: embedTitle || config.embedTitle,
+            embedDescription: embedDescription || config.embedDescription,
+            embedImage: activeImageUrl,
+            
+            endedEmbedTitle: endedEmbedTitle || config.endedEmbedTitle,
+            endedEmbedDescription: endedEmbedDescription || config.endedEmbedDescription,
+            endedEmbedImage: endedImageUrl,
+            endBehavior: endBehavior || 'disable'
         });
 
         await newGiveaway.save();
+
 
         // Log giveaway creation
         if (req.logGiveawayEvent) {

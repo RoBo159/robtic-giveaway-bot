@@ -7,6 +7,7 @@ const GuildConfigSchema = new mongoose.Schema({
     reactionEmoji: { type: String, default: '🎉' },
     embedTitle: { type: String, default: 'New Giveaway!' },
     embedDescription: { type: String, default: 'React to enter!' },
+    embedImage: { type: String, default: null },
     
     // Button Configuration
     buttonName: { type: String, default: 'Enter Giveaway' },
@@ -31,7 +32,8 @@ const GuildConfigSchema = new mongoose.Schema({
     // Ended Embed Customization
     endedEmbedTitle: { type: String, default: '🎉 Giveaway Ended!' },
     endedEmbedDescription: { type: String, default: 'Winner: {winners}\nPrize: {prize}' },
-    endedEmbedColor: { type: String, default: '#808080' }
+    endedEmbedColor: { type: String, default: '#808080' },
+    endedEmbedImage: { type: String, default: null }
 });
 
 module.exports = mongoose.model('GuildConfig', GuildConfigSchema);

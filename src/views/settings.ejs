@@ -166,43 +166,6 @@
                     </div>
                 </div>
 
-                <!-- Ended Embed Customization -->
-                <div class="settings-section settings-header-section">
-                    <div class="settings-label">
-                        <h3><i class="fa-solid fa-palette"></i> Ended Embed Appearance</h3>
-                    </div>
-                </div>
-
-                <div class="settings-section">
-                    <div class="settings-label">
-                        <h3>Ended Embed Title <span class="setting-tooltip" data-tooltip="The title shown on the embed when a giveaway ends"><i class="fa-solid fa-circle-info"></i></span></h3>
-                    </div>
-                    <div class="toggle-wrapper">
-                        <input type="text" name="endedEmbedTitle" id="endedEmbedTitleInput" class="input" style="width: 100%;" value="<%= settings.endedEmbedTitle || '🎉 Giveaway Ended!' %>">
-                    </div>
-                </div>
-
-                <div class="settings-section">
-                    <div class="settings-label">
-                        <h3>Ended Embed Description <span class="setting-tooltip" data-tooltip="The description shown on the embed when a giveaway ends"><i class="fa-solid fa-circle-info"></i></span> <button type="button" class="info-btn" onclick="showVariablesModal()"><i class="fa-solid fa-code"></i></button></h3>
-                    </div>
-                    <div class="toggle-wrapper">
-                        <textarea name="endedEmbedDescription" id="endedEmbedDescriptionInput" class="input settings-textarea" style="width: 100%;"><%= settings.endedEmbedDescription || 'Winner: {winners}\nPrize: {prize}' %></textarea>
-                        <p class="helper-text">Variables: {user}, {prize}, {winners}, {guildName}, {endTime}</p>
-                    </div>
-                </div>
-
-                <div class="settings-section">
-                    <div class="settings-label">
-                        <h3>Ended Embed Color <span class="setting-tooltip" data-tooltip="The color of the embed border when a giveaway ends"><i class="fa-solid fa-circle-info"></i></span></h3>
-                    </div>
-                    <div class="toggle-wrapper">
-                        <div class="color-picker-row">
-                            <input type="color" name="endedEmbedColor" id="endedEmbedColorInput" class="color-input" value="<%= settings.endedEmbedColor || '#808080' %>">
-                            <span class="color-value" id="endedColorValue"><%= settings.endedEmbedColor || '#808080' %></span>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Hide inputs for form submission -->
                 <input type="hidden" name="dmWinners" id="dmWinnersHidden" value="false">
@@ -210,13 +173,17 @@
                 <input type="hidden" name="enableLogging" id="enableLoggingHidden" value="false">
                 <input type="hidden" name="mentionEnabled" id="mentionEnabledHidden" value="false">
 
-                <!-- Save Button -->
-                <div class="settings-footer" id="saveFooter" style="display: none;">
-                    <button type="submit" class="btn btn-primary w-full">
-                        <i class="fa-solid fa-check"></i> Save Settings
-                    </button>
-                </div>
             </form>
+        </div>
+    </div>
+
+    <div id="settingsSaveBar" class="settings-savebar" role="status" aria-live="polite">
+        <div class="settings-savebar-text">You have unsaved settings changes.</div>
+        <div class="settings-savebar-actions">
+            <button type="button" class="btn btn-secondary" onclick="cancelSettingsChanges()">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="submitSettingsForm()">
+                <i class="fa-solid fa-check"></i> Save
+            </button>
         </div>
     </div>
 
@@ -231,7 +198,8 @@
         const mentionOptionsSection = document.getElementById('mentionOptionsSection');
         const mentionRoleSection = document.getElementById('mentionRoleSection');
         const settingsForm = document.getElementById('settingsForm');
-        const saveFooter = document.getElementById('saveFooter');
+        const settingsSaveBar = document.getElementById('settingsSaveBar');
+        let hasUnsavedChanges = false;
 
         // Store initial values for change tracking
         const initialValues = {
@@ -245,32 +213,124 @@
             dmWinnersMessage: document.getElementById('dmMessageInput')?.value || '',
             joinMessage: document.getElementById('joinMessageInput')?.value || '',
             alreadyInGiveawayMessage: document.getElementById('alreadyInMessageInput')?.value || '',
-            endedGiveawayMessage: document.getElementById('endedGiveawayMessageInput')?.value || '',
-            endedEmbedTitle: document.getElementById('endedEmbedTitleInput')?.value || '',
-            endedEmbedDescription: document.getElementById('endedEmbedDescriptionInput')?.value || '',
-            endedEmbedColor: document.getElementById('endedEmbedColorInput')?.value || '#808080'
+            endedGiveawayMessage: document.getElementById('endedGiveawayMessageInput')?.value || ''
         };
+
+        function getCurrentValues() {
+            return {
+                dmWinners: dmCheckbox.checked,
+                autoDelete: autoDeleteCheckbox.checked,
+                enableLogging: enableLoggingCheckbox.checked,
+                mentionEnabled: mentionEnabledCheckbox.checked,
+                mentionType: mentionTypeSelect.value,
+                mentionRoleId: document.getElementById('mentionRoleSelect')?.value || '',
+                loggingChannelId: document.getElementById('loggingChannelSelect')?.value || '',
+                dmWinnersMessage: document.getElementById('dmMessageInput')?.value || '',
+                joinMessage: document.getElementById('joinMessageInput')?.value || '',
+                alreadyInGiveawayMessage: document.getElementById('alreadyInMessageInput')?.value || '',
+                endedGiveawayMessage: document.getElementById('endedGiveawayMessageInput')?.value || ''
+            };
+        }
+
+        function shakeSaveBar() {
+            settingsSaveBar.classList.remove('shake');
+            void settingsSaveBar.offsetWidth;
+            settingsSaveBar.classList.add('shake');
+        }
+
+        function setSaveBarVisible(visible) {
+            hasUnsavedChanges = visible;
+            settingsSaveBar.classList.toggle('show', visible);
+            if (!visible) settingsSaveBar.classList.remove('shake');
+        }
 
         // Check for changes and show/hide save button
         function checkForChanges() {
-            const hasChanges = 
-                dmCheckbox.checked !== initialValues.dmWinners ||
-                autoDeleteCheckbox.checked !== initialValues.autoDelete ||
-                enableLoggingCheckbox.checked !== initialValues.enableLogging ||
-                mentionEnabledCheckbox.checked !== initialValues.mentionEnabled ||
-                mentionTypeSelect.value !== initialValues.mentionType ||
-                document.getElementById('mentionRoleSelect')?.value !== initialValues.mentionRoleId ||
-                document.getElementById('loggingChannelSelect')?.value !== initialValues.loggingChannelId ||
-                document.getElementById('dmMessageInput')?.value !== initialValues.dmWinnersMessage ||
-                document.getElementById('joinMessageInput')?.value !== initialValues.joinMessage ||
-                document.getElementById('alreadyInMessageInput')?.value !== initialValues.alreadyInGiveawayMessage ||
-                document.getElementById('endedGiveawayMessageInput')?.value !== initialValues.endedGiveawayMessage ||
-                document.getElementById('endedEmbedTitleInput')?.value !== initialValues.endedEmbedTitle ||
-                document.getElementById('endedEmbedDescriptionInput')?.value !== initialValues.endedEmbedDescription ||
-                document.getElementById('endedEmbedColorInput')?.value !== initialValues.endedEmbedColor;
-            
-            saveFooter.style.display = hasChanges ? 'block' : 'none';
+            const hasChanges = JSON.stringify(getCurrentValues()) !== JSON.stringify(initialValues);
+            const becameDirty = hasChanges && !hasUnsavedChanges;
+            setSaveBarVisible(hasChanges);
+            if (becameDirty) shakeSaveBar();
         }
+
+        function restoreInitialValues() {
+            dmCheckbox.checked = initialValues.dmWinners;
+            autoDeleteCheckbox.checked = initialValues.autoDelete;
+            enableLoggingCheckbox.checked = initialValues.enableLogging;
+            mentionEnabledCheckbox.checked = initialValues.mentionEnabled;
+            mentionTypeSelect.value = initialValues.mentionType;
+
+            const mentionRoleSelect = document.getElementById('mentionRoleSelect');
+            if (mentionRoleSelect) mentionRoleSelect.value = initialValues.mentionRoleId;
+
+            const loggingChannelSelect = document.getElementById('loggingChannelSelect');
+            if (loggingChannelSelect) loggingChannelSelect.value = initialValues.loggingChannelId;
+
+            const dmMessageInput = document.getElementById('dmMessageInput');
+            if (dmMessageInput) dmMessageInput.value = initialValues.dmWinnersMessage;
+
+            const joinMessageInput = document.getElementById('joinMessageInput');
+            if (joinMessageInput) joinMessageInput.value = initialValues.joinMessage;
+
+            const alreadyInMessageInput = document.getElementById('alreadyInMessageInput');
+            if (alreadyInMessageInput) alreadyInMessageInput.value = initialValues.alreadyInGiveawayMessage;
+
+            const endedGiveawayMessageInput = document.getElementById('endedGiveawayMessageInput');
+            if (endedGiveawayMessageInput) endedGiveawayMessageInput.value = initialValues.endedGiveawayMessage;
+
+            toggleDMMessage();
+            toggleLoggingChannel();
+            toggleMentionOptions();
+            setSaveBarVisible(false);
+        }
+
+        function cancelSettingsChanges() {
+            restoreInitialValues();
+            if (typeof showSnackbar === 'function') {
+                showSnackbar('Changes discarded.', 'info');
+            }
+        }
+
+        function submitSettingsForm() {
+            document.getElementById('dmWinnersHidden').value = dmCheckbox.checked ? 'true' : 'false';
+            document.getElementById('autoDeleteHidden').value = autoDeleteCheckbox.checked ? 'true' : 'false';
+            document.getElementById('enableLoggingHidden').value = enableLoggingCheckbox.checked ? 'true' : 'false';
+            document.getElementById('mentionEnabledHidden').value = mentionEnabledCheckbox.checked ? 'true' : 'false';
+
+            const body = new URLSearchParams(new FormData(settingsForm));
+
+            fetch(settingsForm.action, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json'
+                },
+                body
+            })
+            .then(async (response) => {
+                if (!response.ok) {
+                    throw new Error('Failed to save settings');
+                }
+                const data = await response.json().catch(() => ({}));
+                if (!data.success) {
+                    throw new Error('Failed to save settings');
+                }
+
+                Object.assign(initialValues, getCurrentValues());
+                setSaveBarVisible(false);
+
+                if (typeof showSnackbar === 'function') {
+                    showSnackbar('Settings saved successfully.', 'success');
+                }
+            })
+            .catch((error) => {
+                console.error(error);
+                if (typeof showSnackbar === 'function') {
+                    showSnackbar('Error while saving settings.', 'error');
+                }
+            });
+        }
+
+        window.cancelSettingsChanges = cancelSettingsChanges;
+        window.submitSettingsForm = submitSettingsForm;
 
         // Add change listeners to all form elements
         settingsForm.querySelectorAll('input, textarea, select').forEach(el => {
@@ -318,18 +378,39 @@
             mentionRoleSection.style.display = mentionTypeSelect.value === 'role' ? 'grid' : 'none';
         }
 
-        // Update hidden field values on form submit
+        // Update hidden field values on native form submit (fallback)
         settingsForm.addEventListener('submit', (e) => {
             document.getElementById('dmWinnersHidden').value = dmCheckbox.checked ? 'true' : 'false';
             document.getElementById('autoDeleteHidden').value = autoDeleteCheckbox.checked ? 'true' : 'false';
             document.getElementById('enableLoggingHidden').value = enableLoggingCheckbox.checked ? 'true' : 'false';
             document.getElementById('mentionEnabledHidden').value = mentionEnabledCheckbox.checked ? 'true' : 'false';
+            e.preventDefault();
+            submitSettingsForm();
+        });
+
+        // Prevent accidental navigation when there are unsaved changes
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('a[href]');
+            if (!link || link.target === '_blank' || link.hasAttribute('download')) return;
+            if (!hasUnsavedChanges) return;
+
+            e.preventDefault();
+            shakeSaveBar();
+            alert('There are unsaved changes. Please Save or Cancel first.');
+        });
+
+        // Browser close/reload guard
+        window.addEventListener('beforeunload', (e) => {
+            if (!hasUnsavedChanges) return;
+            e.preventDefault();
+            e.returnValue = 'There are unsaved changes you have not saved.';
         });
 
         // Initialize visibility
         toggleDMMessage();
         toggleLoggingChannel();
         toggleMentionOptions();
+        setSaveBarVisible(false);
 
         // Variables Modal
         function showVariablesModal() {

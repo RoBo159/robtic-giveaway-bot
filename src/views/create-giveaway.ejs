@@ -4,6 +4,7 @@
     <%- include('partials/head') %>
     <title>Create Giveaway - <%= guild.name %> | Giveaway</title>
     <link rel="stylesheet" href="/css/create-giveaway.css">
+    <link rel="stylesheet" href="/css/create-giveaway-tabs.css">
     <link rel="stylesheet" href="/css/emoji-picker.css">
 </head>
 <body class="dark">
@@ -21,7 +22,7 @@
         <div class="create-giveaway-layout">
             <div class="create-form-section">
                 <div class="card p-8">
-                    <form action="/dashboard/<%= guild.id %>/create" method="POST" class="create-giveaway-form" id="createForm">
+                    <form action="/dashboard/<%= guild.id %>/create" method="POST" class="create-giveaway-form" id="createForm" enctype="multipart/form-data">
                         <div class="form-group">
                             <label class="label">Prize</label>
                             <input type="text" name="prize" id="prizeInput" required placeholder="e.g. Nitro Classic" oninput="updatePreview()">
@@ -95,7 +96,13 @@
 
             <div class="preview-section">
                 <div class="preview-header">
-                    <h3 class="font-bold">Live Preview</h3>
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <h3 class="font-bold">Live Preview</h3>
+                        <div class="embed-config-tabs" style="margin: 0; border-bottom: none; gap: 0.5rem;">
+                            <button type="button" class="tab-btn active" onclick="switchEmbedTab('active')" id="tab-active">Active</button>
+                            <button type="button" class="tab-btn" onclick="switchEmbedTab('ended')" id="tab-ended">Ended</button>
+                        </div>
+                    </div>
                     <button type="button" class="settings-btn" onclick="openConfigPopup()" title="Giveaway Settings">
                         <i class="fa-solid fa-gear"></i>
                     </button>
@@ -181,12 +188,16 @@
         config = {
             embedTitle: <%- JSON.stringify(config.embedTitle || 'New Giveaway!') %>,
             embedDescription: <%- JSON.stringify(config.embedDescription || 'React to enter!') %>,
+            embedImage: <%- JSON.stringify(config.embedImage || null) %>,
             embedColor: <%- JSON.stringify(config.embedColor || '#0057ff') %>,
             giveawayType: <%- JSON.stringify(config.giveawayType || 'reaction') %>,
             buttonName: <%- JSON.stringify(config.buttonName || 'Enter Giveaway') %>,
             buttonEmoji: <%- JSON.stringify(config.buttonEmoji || '🎁') %>,
             reactionEmoji: <%- JSON.stringify(config.reactionEmoji || '🎉') %>,
             buttonColor: <%- JSON.stringify(config.buttonColor || 'primary') %>,
+            endedEmbedTitle: <%- JSON.stringify(config.endedEmbedTitle || '🎉 Giveaway Ended!') %>,
+            endedEmbedDescription: <%- JSON.stringify(config.endedEmbedDescription || 'Winner: {winners}\nPrize: {prize}') %>,
+            endedEmbedImage: <%- JSON.stringify(config.endedEmbedImage || null) %>,
             guildName: <%- JSON.stringify(guild.name) %>
         };
         
