@@ -81,7 +81,7 @@
                     <h3 class="font-bold mb-4">My Templates</h3>
                     <div class="templates-compact">
                         <% templates.forEach(t => { %>
-                        <div class="template-btn" onclick="loadDbTemplate('<%= t.name %>', '<%= t.prize %>', <%= t.duration %>, <%= t.winnersCount %>, <%= t.maxEntries || 0 %>, '<%= t.channelId || '' %>', '<%= t.requiredRole || '' %>')">
+                        <div class="template-btn" onclick='loadDbTemplate(<%- JSON.stringify(t.name) %>, <%- JSON.stringify(t.prize) %>, <%= t.duration %>, <%= t.winnersCount %>, <%= t.maxEntries || 0 %>, <%- JSON.stringify(t.channelId || "") %>, <%- JSON.stringify(t.requiredRole || "") %>)'>
                             <div class="template-btn-info">
                                 <span class="template-btn-name"><%= t.name %></span>
                                 <span class="template-btn-detail"><%= t.prize %> • <%= t.duration %>min • <%= t.winnersCount %> winner(s)</span>
@@ -108,7 +108,7 @@
                     </button>
                 </div>
                 
-                <!-- Discord Embed Preview -->
+                
                 <div class="discord-embed-preview">
                     <div class="embed-content">
                         <div class="embed-border" style="background-color: <%= config.embedColor || '#0057ff' %>;"></div>
@@ -125,7 +125,7 @@
                     </div>
                 </div>
                 
-                <!-- Button or Reaction Preview -->
+                
                 <% if (config.giveawayType === 'button') { %>
                     <div class="discord-button-preview discord-btn-<%= config.buttonColor || 'primary' %>" id="previewButton">
                         <span id="previewButtonEmoji"></span>
@@ -154,7 +154,7 @@
                     </div>
                 </div>
 
-                <!-- Quick Templates -->
+                
                 <div class="templates-compact">
                     <h4 style="font-size: 0.75rem; color: var(--muted-foreground); margin-bottom: 0.5rem;">QUICK TEMPLATES</h4>
                     <div class="template-btn" onclick="loadTemplate('nitro')">
@@ -184,7 +184,7 @@
     <script src="/js/emoji-picker.js"></script>
     <script src="/js/create-giveaway.js"></script>
     <script>
-        // Initialize data from server - assign to globals from create-giveaway.js
+
         config = {
             embedTitle: <%- JSON.stringify(config.embedTitle || 'New Giveaway!') %>,
             embedDescription: <%- JSON.stringify(config.embedDescription || 'React to enter!') %>,
@@ -195,6 +195,7 @@
             buttonEmoji: <%- JSON.stringify(config.buttonEmoji || '🎁') %>,
             reactionEmoji: <%- JSON.stringify(config.reactionEmoji || '🎉') %>,
             buttonColor: <%- JSON.stringify(config.buttonColor || 'primary') %>,
+            endBehavior: <%- JSON.stringify(config.endBehavior || 'disable') %>,
             endedEmbedTitle: <%- JSON.stringify(config.endedEmbedTitle || '🎉 Giveaway Ended!') %>,
             endedEmbedDescription: <%- JSON.stringify(config.endedEmbedDescription || 'Winner: {winners}\nPrize: {prize}') %>,
             endedEmbedImage: <%- JSON.stringify(config.endedEmbedImage || null) %>,

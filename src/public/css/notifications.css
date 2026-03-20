@@ -1,4 +1,4 @@
-/* Snackbar Notifications */
+
 .snackbar {
     visibility: hidden;
     min-width: 280px;
@@ -81,7 +81,7 @@
     font-size: 1.25rem;
 }
 
-/* Modal Overlay */
+
 .modal-overlay {
     display: none;
     position: fixed;
@@ -211,7 +211,7 @@
     min-width: 80px;
 }
 
-/* Custom Emoji Input in Picker */
+
 .emoji-custom-input {
     display: flex;
     gap: 0.5rem;

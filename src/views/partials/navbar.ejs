@@ -79,15 +79,13 @@
         <div class="navbar-actions">
             <% if (user) { %>
                 <div class="navbar-user">
-                    <% 
-                        // Fix avatar URL - handle missing avatar gracefully
+                    <% 
                         const avatarId = user.avatar;
                         const userId = user.discordId || user.id;
                         let avatarUrl;
                         if (avatarId) {
                             avatarUrl = `https://cdn.discordapp.com/avatars/${userId}/${avatarId}.png`;
-                        } else {
-                            // Discord default avatar based on discriminator or id
+                        } else {
                             const defaultNum = parseInt(userId) % 5;
                             avatarUrl = `https://cdn.discordapp.com/embed/avatars/${defaultNum}.png`;
                         }

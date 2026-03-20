@@ -222,7 +222,7 @@
   }
 }
 
-/* Setting Tooltips */
+
 .setting-tooltip {
   position: relative;
   display: inline-flex;
@@ -287,7 +287,7 @@
   visibility: visible;
 }
 
-/* Info button for variables */
+
 .info-btn {
   background: transparent;
   border: none;
@@ -305,7 +305,7 @@
   opacity: 1;
 }
 
-/* Header Section */
+
 .settings-header-section {
   background: rgba(var(--primary-rgb), 0.05);
   border-bottom: 2px solid var(--primary);
@@ -322,7 +322,7 @@
   font-size: 1rem;
 }
 
-/* Color Picker */
+
 .color-picker-row {
   display: flex;
   align-items: center;

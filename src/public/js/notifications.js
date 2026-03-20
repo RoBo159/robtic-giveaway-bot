@@ -1,51 +1,28 @@
-/**
- * Notification System - Snackbar and Modal utilities
- */
 
-// ==================== SNACKBAR ====================
 
 let snackbarTimeout = null;
 
-/**
- * Show a snackbar notification
- * @param {string} message - The message to display
- * @param {string} type - Type: 'success', 'error', 'warning', 'info'
- * @param {number} duration - Duration in ms (default: 3000)
- */
+
 function showSnackbar(message, type = 'info', duration = 3000) {
     const snackbar = document.getElementById('snackbar');
     if (!snackbar) {
         console.error('Snackbar element not found');
         return;
-    }
-    
-    // Clear any existing timeout
+    }
     if (snackbarTimeout) {
         clearTimeout(snackbarTimeout);
-    }
-    
-    // Remove existing classes
-    snackbar.classList.remove('show', 'success', 'error', 'warning', 'info');
-    
-    // Set message and type
+    }
+    snackbar.classList.remove('show', 'success', 'error', 'warning', 'info');
     snackbar.textContent = message;
-    snackbar.classList.add(type);
-    
-    // Force reflow for animation
-    void snackbar.offsetWidth;
-    
-    // Show snackbar
-    snackbar.classList.add('show');
-    
-    // Auto hide after duration
+    snackbar.classList.add(type);
+    void snackbar.offsetWidth;
+    snackbar.classList.add('show');
     snackbarTimeout = setTimeout(() => {
         snackbar.classList.remove('show');
     }, duration);
 }
 
-/**
- * Hide the snackbar immediately
- */
+
 function hideSnackbar() {
     const snackbar = document.getElementById('snackbar');
     if (snackbar) {
@@ -54,20 +31,11 @@ function hideSnackbar() {
     if (snackbarTimeout) {
         clearTimeout(snackbarTimeout);
     }
-}
-
-
-// ==================== MODAL ====================
+}
 
 let currentModalCallback = null;
 
-/**
- * Show a confirmation modal
- * @param {string} title - Modal title
- * @param {string} bodyHtml - HTML content for the modal body
- * @param {Function} onConfirm - Callback when confirmed
- * @param {Object} options - Additional options
- */
+
 function showModal(title, bodyHtml, onConfirm = null, options = {}) {
     const overlay = document.getElementById('modalOverlay');
     const titleEl = document.getElementById('modalTitle');
@@ -78,13 +46,9 @@ function showModal(title, bodyHtml, onConfirm = null, options = {}) {
     if (!overlay) {
         console.error('Modal overlay element not found');
         return;
-    }
-    
-    // Set content
+    }
     if (titleEl) titleEl.textContent = title;
-    if (bodyEl) bodyEl.innerHTML = bodyHtml;
-    
-    // Configure buttons
+    if (bodyEl) bodyEl.innerHTML = bodyHtml;
     if (confirmBtn) {
         confirmBtn.textContent = options.confirmText || 'Confirm';
         confirmBtn.className = 'btn ' + (options.confirmClass || 'btn-primary');
@@ -96,25 +60,17 @@ function showModal(title, bodyHtml, onConfirm = null, options = {}) {
         } else {
             cancelBtn.style.display = '';
         }
-    }
-    
-    // Store callback
-    currentModalCallback = onConfirm;
-    
-    // Show modal
+    }
+    currentModalCallback = onConfirm;
     overlay.classList.add('show');
-    document.body.style.overflow = 'hidden';
-    
-    // Focus first input if any
+    document.body.style.overflow = 'hidden';
     setTimeout(() => {
         const firstInput = bodyEl.querySelector('input, select, textarea');
         if (firstInput) firstInput.focus();
     }, 100);
 }
 
-/**
- * Close the modal
- */
+
 function closeModal() {
     const overlay = document.getElementById('modalOverlay');
     if (overlay) {
@@ -124,9 +80,7 @@ function closeModal() {
     currentModalCallback = null;
 }
 
-/**
- * Confirm modal action
- */
+
 function confirmModal() {
     if (currentModalCallback) {
         currentModalCallback();
@@ -134,11 +88,7 @@ function confirmModal() {
     closeModal();
 }
 
-/**
- * Show an alert modal (replaces window.alert)
- * @param {string} title - Modal title
- * @param {string} message - Alert message
- */
+
 function showAlert(title, message) {
     showModal(title, `<p>${message}</p>`, null, {
         confirmText: 'OK',
@@ -146,12 +96,7 @@ function showAlert(title, message) {
     });
 }
 
-/**
- * Show a confirm dialog (replaces window.confirm)
- * @param {string} title - Modal title  
- * @param {string} message - Confirm message
- * @param {Function} onConfirm - Callback when confirmed
- */
+
 function showConfirm(title, message, onConfirm) {
     showModal(title, `<p>${message}</p>`, onConfirm, {
         confirmText: 'Yes',
@@ -159,14 +104,7 @@ function showConfirm(title, message, onConfirm) {
     });
 }
 
-/**
- * Show a prompt dialog (replaces window.prompt)
- * @param {string} title - Modal title
- * @param {string} label - Input label
- * @param {string} defaultValue - Default input value
- * @param {Function} onConfirm - Callback with input value
- * @param {Object} options - Additional options (placeholder, helperText)
- */
+
 function showPrompt(title, label, defaultValue = '', onConfirm, options = {}) {
     const inputId = 'promptInput_' + Date.now();
     const bodyHtml = `
@@ -189,15 +127,9 @@ function showPrompt(title, label, defaultValue = '', onConfirm, options = {}) {
         confirmText: options.confirmText || 'OK',
         cancelText: options.cancelText || 'Cancel'
     });
-}
+}
 
 
-// ==================== CUSTOM EMOJI INPUT ====================
-
-/**
- * Show custom emoji input modal
- * @param {Function} onSubmit - Callback with emoji value
- */
 function showCustomEmojiInput(onSubmit) {
     const bodyHtml = `
         <div class="form-group">
@@ -215,23 +147,17 @@ function showCustomEmojiInput(onSubmit) {
         const errorEl = document.getElementById('customEmojiError');
         if (!input) return;
         
-        let value = input.value.trim();
-        
-        // If just an ID, try to format it
-        if (/^\d{17,19}$/.test(value)) {
-            // Show prompt for emoji name
+        let value = input.value.trim();
+        if (/^\d{17,19}$/.test(value)) {
             showPrompt('Emoji Name', 'Enter the emoji name:', 'emoji', (name) => {
                 const formatted = `<:${name}:${value}>`;
                 if (onSubmit) onSubmit(formatted);
             });
             return;
-        }
-        
-        // Validate format
+        }
         if (/<(a?):(\w+):(\d+)>/.test(value)) {
             if (onSubmit) onSubmit(value);
-        } else {
-            // Check if it's a unicode emoji
+        } else {
             if (/\p{Emoji}/u.test(value)) {
                 if (onSubmit) onSubmit(value);
             } else {
@@ -245,13 +171,9 @@ function showCustomEmojiInput(onSubmit) {
     }, {
         confirmText: 'Use Emoji'
     });
-}
+}
 
-
-// ==================== INITIALIZATION ====================
-
-document.addEventListener('DOMContentLoaded', () => {
-    // Close modal on overlay click
+document.addEventListener('DOMContentLoaded', () => {
     const overlay = document.getElementById('modalOverlay');
     if (overlay) {
         overlay.addEventListener('click', (e) => {
@@ -259,9 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 closeModal();
             }
         });
-    }
-    
-    // Close modal on Escape key
+    }
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && overlay?.classList.contains('show')) {
             closeModal();

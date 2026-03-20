@@ -1,5 +1,4 @@
 const { Client, GatewayIntentBits, Partials } = require("discord.js");
-const mongoose = require("mongoose");
 const Giveaway = require("./models/Giveaway");
 const GuildConfig = require("./models/GuildConfig");
 const { parseTemplate } = require("./utils/templateParser");
@@ -13,85 +12,219 @@ const client = new Client({
   partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
 
+const processedInteractionIds = new Map();
+
+function markInteractionProcessed(interactionId) {
+  processedInteractionIds.set(interactionId, Date.now());
+  setTimeout(() => {
+    processedInteractionIds.delete(interactionId);
+  }, 5 * 60 * 1000);
+}
+
 client.once("ready", () => {
   console.log(`Bot logged in as ${client.user.tag}`);
 });
 
-// Handle Buttons
+async function safeInteractionRespond(interaction, content) {
+  try {
+    if (interaction.deferred || interaction.replied) {
+      await interaction.editReply({ content });
+      return;
+    }
+
+    await interaction.reply({
+      content,
+      flags: 64,
+    });
+  } catch (err) {
+    if (err?.code === 10062 || err?.code === 40060) {
+      return;
+    }
+    throw err;
+  }
+}
+
+async function findActiveGiveawayByMessageIds(messageIds) {
+  const attempts = 6;
+  const delayMs = 350;
+
+  for (let i = 0; i < attempts; i += 1) {
+    const giveaway = await Giveaway.findOne({
+      messageId: { $in: messageIds },
+      ended: false,
+    }).sort({ _id: -1 });
+
+    if (giveaway) return giveaway;
+    if (i < attempts - 1) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+
+  return null;
+}
+
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isButton()) return;
-  if (interaction.customId === "join_giveaway") {
-    const giveaway = await Giveaway.findOne({
-      messageId: interaction.message.id,
-    });
-    if (!giveaway || giveaway.ended)
-      return interaction.reply({
-        content: "This giveaway is over or invalid.",
-        ephemeral: true,
-      });
-
-    // Get guild config for custom messages
-    const guildConfig =
-      (await GuildConfig.findOne({ guildId: giveaway.guildId })) || {};
-    const templateData = {
-      userId: interaction.user.id,
-      prize: giveaway.prize,
-      guildName: interaction.guild.name,
-      endTime: giveaway.endTime,
-      winnersCount: giveaway.winnersCount,
-    };
-
-    // Check DB entries
-    if (giveaway.entries.includes(interaction.user.id)) {
-      const alreadyMessage = parseTemplate(
-        guildConfig.alreadyInGiveawayMessage ||
-          "You are already in this giveaway!",
-        templateData,
-      );
-      return interaction.reply({ content: alreadyMessage, ephemeral: true });
+  if (interaction.customId.startsWith("join_giveaway")) {
+    if (processedInteractionIds.has(interaction.id)) {
+      return;
     }
+    markInteractionProcessed(interaction.id);
 
-    // Check Max Entries
-    if (
-      giveaway.maxEntries > 0 &&
-      giveaway.entries.length >= giveaway.maxEntries
-    ) {
-      return interaction.reply({
-        content: "This giveaway has reached the maximum number of entries!",
-        ephemeral: true,
-      });
-    }
-
-    // Check Role Requirement
-    if (giveaway.requiredRole) {
-      if (!interaction.member.roles.cache.has(giveaway.requiredRole)) {
-        return interaction.reply({
-          content: "You do not have the required role to enter.",
-          ephemeral: true,
-        });
+    try {
+      if (!interaction.deferred && !interaction.replied) {
+        try {
+          await interaction.deferReply({ flags: 64 });
+        } catch (ackErr) {
+          if (ackErr?.code !== 10062 && ackErr?.code !== 40060) {
+            throw ackErr;
+          }
+        }
       }
+
+      const customMessageId = interaction.customId.includes(":")
+        ? interaction.customId.split(":")[1]
+        : null;
+      const candidateMessageIds = [interaction.message.id];
+      if (customMessageId) {
+        candidateMessageIds.unshift(customMessageId);
+      }
+
+      const giveaway = await findActiveGiveawayByMessageIds(candidateMessageIds);
+
+      if (!giveaway)
+        return safeInteractionRespond(
+          interaction,
+          "This giveaway is over or invalid.",
+        );
+
+      const guildConfig =
+        (await GuildConfig.findOne({ guildId: giveaway.guildId })) || {};
+      const templateData = {
+        userId: interaction.user.id,
+        prize: giveaway.prize,
+        guildName: interaction.guild.name,
+        endTime: giveaway.endTime,
+        winnersCount: giveaway.winnersCount,
+      };
+
+      if (giveaway.entries.includes(interaction.user.id)) {
+        const alreadyMessage = parseTemplate(
+          guildConfig.alreadyInGiveawayMessage ||
+            "You are already in this giveaway!",
+          templateData,
+        );
+        return safeInteractionRespond(interaction, alreadyMessage);
+      }
+
+      if (
+        giveaway.maxEntries > 0 &&
+        giveaway.entries.length >= giveaway.maxEntries
+      ) {
+        return safeInteractionRespond(
+          interaction,
+          "This giveaway has reached the maximum number of entries!",
+        );
+      }
+
+      if (giveaway.requiredRole) {
+        const guild = interaction.guild;
+        if (!guild) {
+          return safeInteractionRespond(
+            interaction,
+            "This giveaway is over or invalid.",
+          );
+        }
+
+        const member =
+          interaction.member && interaction.member.roles
+            ? interaction.member
+            : await guild.members.fetch(interaction.user.id).catch(() => null);
+
+        if (!member || !member.roles?.cache?.has(giveaway.requiredRole)) {
+          return safeInteractionRespond(
+            interaction,
+            "You do not have the required role to enter.",
+          );
+        }
+      }
+
+      const entryFilter = {
+        _id: giveaway._id,
+        ended: false,
+        entries: { $ne: interaction.user.id },
+      };
+
+      if (giveaway.maxEntries > 0) {
+        entryFilter.$expr = {
+          $lt: [{ $size: "$entries" }, giveaway.maxEntries],
+        };
+      }
+
+      const updatedGiveaway = await Giveaway.findOneAndUpdate(
+        entryFilter,
+        { $addToSet: { entries: interaction.user.id } },
+        { new: true },
+      );
+
+      if (!updatedGiveaway) {
+        const latestGiveaway = await Giveaway.findById(giveaway._id);
+        if (!latestGiveaway || latestGiveaway.ended) {
+          return safeInteractionRespond(
+            interaction,
+            "This giveaway is over or invalid.",
+          );
+        }
+
+        if (latestGiveaway.entries.includes(interaction.user.id)) {
+          const alreadyMessage = parseTemplate(
+            guildConfig.alreadyInGiveawayMessage ||
+              "You are already in this giveaway!",
+            templateData,
+          );
+          return safeInteractionRespond(interaction, alreadyMessage);
+        }
+
+        if (
+          latestGiveaway.maxEntries > 0 &&
+          latestGiveaway.entries.length >= latestGiveaway.maxEntries
+        ) {
+          return safeInteractionRespond(
+            interaction,
+            "This giveaway has reached the maximum number of entries!",
+          );
+        }
+
+        return safeInteractionRespond(
+          interaction,
+          "Could not enter giveaway. Please try again.",
+        );
+      }
+
+      const joinMessage = guildConfig.joinMessage
+        ? parseTemplate(guildConfig.joinMessage, templateData)
+        : "You have entered the giveaway!";
+
+      await safeInteractionRespond(interaction, joinMessage);
+
+      await logGiveawayEvent(giveaway.guildId, "entry", {
+        userId: interaction.user.id,
+        prize: giveaway.prize,
+        guildName: interaction.guild.name,
+      });
+    } catch (err) {
+      if (err?.code === 10062 || err?.code === 40060) {
+        return;
+      }
+      console.error("Error handling join_giveaway interaction:", err);
     }
-
-    giveaway.entries.push(interaction.user.id);
-    await giveaway.save();
-
-    // Send join message using template
-    const joinMessage = guildConfig.joinMessage
-      ? parseTemplate(guildConfig.joinMessage, templateData)
-      : "You have entered the giveaway!";
-
-    await interaction.reply({ content: joinMessage, ephemeral: true });
-
-    // Log giveaway entry if logging enabled
-    await logGiveawayEvent(giveaway.guildId, "entry", {
-      userId: interaction.user.id,
-      prize: giveaway.prize,
-      guildName: interaction.guild.name,
-    });
   }
 });
 
-// Handle Reactions
+client.on("error", (err) => {
+  console.error("Discord client error:", err);
+});
+
 client.on("messageReactionAdd", async (reaction, user) => {
   if (user.bot) return;
   if (reaction.partial) {
@@ -107,24 +240,19 @@ client.on("messageReactionAdd", async (reaction, user) => {
   if (!giveaway || giveaway.ended) return;
 
   if (!giveaway.entries.includes(user.id)) {
-    // Check Max Entries
     if (
       giveaway.maxEntries > 0 &&
       giveaway.entries.length >= giveaway.maxEntries
     ) {
-      // Remove reaction if full
       reaction.users.remove(user.id);
       return;
     }
 
-    // Basic check, might need to fetch member for role check
-    // Check Role if configured
     if (giveaway.requiredRole) {
       const guild = reaction.message.guild;
       try {
         const member = await guild.members.fetch(user.id);
         if (!member.roles.cache.has(giveaway.requiredRole)) {
-          // Can't really reply to reaction add easily without DM, just ignore or remove reaction
           reaction.users.remove(user.id);
           return;
         }
@@ -136,7 +264,6 @@ client.on("messageReactionAdd", async (reaction, user) => {
     giveaway.entries.push(user.id);
     await giveaway.save();
 
-    // Log giveaway entry
     await logGiveawayEvent(giveaway.guildId, "entry", {
       userId: user.id,
       prize: giveaway.prize,
@@ -145,7 +272,6 @@ client.on("messageReactionAdd", async (reaction, user) => {
   }
 });
 
-// Giveaway Checker Interval (Runs every 10 seconds)
 setInterval(async () => {
   try {
     const endedGiveaways = await Giveaway.find({
@@ -165,14 +291,11 @@ async function endGiveaway(giveaway) {
   try {
     giveaway.ended = true;
 
-    // Pick Winners
-    // Filter out bot IDs if any sneaked in, though we check on entry
     const entries = giveaway.entries;
     const winnersCount = giveaway.winnersCount || 1;
 
     let winners = [];
     if (entries.length > 0) {
-      // Shuffle
       const shuffled = entries.sort(() => 0.5 - Math.random());
       winners = shuffled.slice(0, winnersCount);
     }
@@ -180,105 +303,104 @@ async function endGiveaway(giveaway) {
     giveaway.winners = winners;
     await giveaway.save();
 
-    // Notify Discord
     try {
       const guild = await client.guilds.fetch(giveaway.guildId);
       const channel = await guild.channels.fetch(giveaway.channelId);
 
-      // Get guild config for all settings
       const guildConfig =
         (await GuildConfig.findOne({ guildId: giveaway.guildId })) || {};
 
       let giveawayMessage = null;
 
-      // Fetch original message to edit it (mark as ended)
       try {
         giveawayMessage = await channel.messages.fetch(giveaway.messageId);
-        const { EmbedBuilder, ButtonBuilder, ActionRowBuilder } = require("discord.js");
+        const {
+          EmbedBuilder,
+          ButtonBuilder,
+          ActionRowBuilder,
+        } = require("discord.js");
         const path = require("path");
 
-        // Prepare Template Data
-        const winnerMentions = winners.length > 0 ? winners.map((w) => `<@${w}>`).join(", ") : "No winners";
+        const winnerMentions =
+          winners.length > 0
+            ? winners.map((w) => `<@${w}>`).join(", ")
+            : "No winners";
         const templateData = {
-            prize: giveaway.prize,
-            winners: winnerMentions,
-            count: winners.length,
-            winnersCount: giveaway.winnersCount,
-            guildName: guild.name,
-            endTime: giveaway.endTime
+          prize: giveaway.prize,
+          winners: winnerMentions,
+          count: winners.length,
+          winnersCount: giveaway.winnersCount,
+          guildName: guild.name,
+          endTime: giveaway.endTime,
         };
 
-        const endedTitle = parseTemplate(giveaway.endedEmbedTitle || guildConfig.endedEmbedTitle || "🎉 Giveaway Ended!", templateData);
-        const endedDescription = parseTemplate(giveaway.endedEmbedDescription || guildConfig.endedEmbedDescription || "Winner: {winners}\nPrize: {prize}", templateData);
-        const endedColor = giveaway.endedEmbedColor || guildConfig.endedEmbedColor || "#2F3136";
+        const endedTitle = parseTemplate(
+          giveaway.endedEmbedTitle ||
+            guildConfig.endedEmbedTitle ||
+            "🎉 Giveaway Ended!",
+          templateData,
+        );
+        const endedDescription = parseTemplate(
+          giveaway.endedEmbedDescription ||
+            guildConfig.endedEmbedDescription ||
+            "Winner: {winners}\nPrize: {prize}",
+          templateData,
+        );
+        const endedColor =
+          giveaway.endedEmbedColor || guildConfig.endedEmbedColor || "#2F3136";
 
         const newEmbed = new EmbedBuilder(giveawayMessage.embeds[0].data)
-          .setColor(endedColor) 
+          .setColor(endedColor)
           .setTitle(endedTitle)
           .setDescription(endedDescription)
           .setThumbnail(null);
 
-        // Handle Image
         let files = [];
-        
+
         if (giveaway.endedEmbedImage) {
           if (/^https?:\/\//i.test(giveaway.endedEmbedImage)) {
             newEmbed.setImage(giveaway.endedEmbedImage);
           } else {
-            const fileName = giveaway.endedEmbedImage.startsWith('/uploads/')
-              ? decodeURIComponent(giveaway.endedEmbedImage.replace('/uploads/', ''))
+            const fileName = giveaway.endedEmbedImage.startsWith("/uploads/")
+              ? decodeURIComponent(
+                  giveaway.endedEmbedImage.replace("/uploads/", ""),
+                )
               : giveaway.endedEmbedImage;
-            const imagePath = path.join(__dirname, 'public/uploads', fileName);
+            const imagePath = path.join(__dirname, "public/uploads", fileName);
             files.push({
               attachment: imagePath,
-              name: fileName
+              name: fileName,
             });
             newEmbed.setImage(`attachment://${fileName}`);
           }
         } else {
-            // Keep original image logic? 
-            // If the original embed had an image, and we use `new EmbedBuilder(oldEmbed.data)`, 
-            // it preserves the image URL (if it was an HTTP URL).
-            // If it was an attachment, we might lose it if we don't re-upload or if discord handles it.
-            // Discord usually invalidates attachment URLs on edit if the attachment isn't re-sent or preserved.
-            // If we assume a fresh specific ended appearance, we might just clear it if not specified.
-            // But let's verify if `endedEmbedImage` is null, we probably want NO image or default?
-            // The prompt implies customization. If not set, maybe no image is better for "Ended" state to distinguish.
-            // Unless the user wants it.
-            // For now, if no ended image, I'll remove the image from the embed to be safe/clean.
-            newEmbed.setImage(null);
+          newEmbed.setImage(null);
         }
 
-        // Handle End Behavior (Buttons)
-        const endBehavior = giveaway.endBehavior || 'disable';
-        let components = []; // Default to remove if 'remove' or other issues
-        
+        const endBehavior =
+          giveaway.endBehavior === "remove" ? "remove" : "disable";
+        let components = [];
+
         if (giveawayMessage.components.length > 0) {
-             if (endBehavior === 'disable') {
-                  const oldRow = giveawayMessage.components[0];
-                  const newComponents = oldRow.components.map((c) =>
-                    ButtonBuilder.from(c).setDisabled(true),
-                  );
-                  components = [new ActionRowBuilder().addComponents(newComponents)];
-             } else if (endBehavior === 'keep') {
-                  // Keep components as they are (active)
-                  components = giveawayMessage.components;
-             } 
-             // if 'remove', components is empty array
+          if (endBehavior === "disable") {
+            const oldRow = giveawayMessage.components[0];
+            const newComponents = oldRow.components.map((c) =>
+              ButtonBuilder.from(c).setDisabled(true),
+            );
+            components = [new ActionRowBuilder().addComponents(newComponents)];
+          }
         }
 
         await giveawayMessage.edit({
-            embeds: [newEmbed],
-            components: components,
-            files: files.length > 0 ? files : []
+          embeds: [newEmbed],
+          components: components,
+          files: files.length > 0 ? files : [],
         });
       } catch (e) {
         console.log("Could not update original message", e);
       }
 
-      // Send New Message
       if (winners.length > 0) {
-        // Use custom ended giveaway message with template parsing
         const templateData = {
           prize: giveaway.prize,
           guildName: guild.name,
@@ -286,7 +408,6 @@ async function endGiveaway(giveaway) {
           winnersCount: giveaway.winnersCount,
         };
 
-        // Send ended message for each winner (or combined)
         const endedMessageTemplate =
           guildConfig.endedGiveawayMessage ||
           "🎉 Congratulations {user}! You won **{prize}**!";
@@ -298,7 +419,6 @@ async function endGiveaway(giveaway) {
 
         await channel.send(endedMessage);
 
-        // DM Winners if enabled in guild config
         if (guildConfig.dmWinners) {
           for (const winnerId of winners) {
             try {
@@ -310,7 +430,6 @@ async function endGiveaway(giveaway) {
               );
               await user.send(`🎉 ${dmMessage}\n\n*From: ${guild.name}*`);
             } catch (dmErr) {
-              // Handle cases where user has DMs closed
               if (dmErr.code === 50007) {
                 console.log(
                   `Cannot DM winner ${winnerId}: User has DMs disabled`,
@@ -322,7 +441,6 @@ async function endGiveaway(giveaway) {
           }
         }
 
-        // Log giveaway end
         await logGiveawayEvent(giveaway.guildId, "end", {
           prize: giveaway.prize,
           guildName: guild.name,
@@ -333,7 +451,6 @@ async function endGiveaway(giveaway) {
           `Giveaway for **${giveaway.prize}** ended, but no one entered!`,
         );
 
-        // Log giveaway end with no winners
         await logGiveawayEvent(giveaway.guildId, "end", {
           prize: giveaway.prize,
           guildName: guild.name,
@@ -341,10 +458,8 @@ async function endGiveaway(giveaway) {
         });
       }
 
-      // Auto-delete original giveaway message if enabled
       if (guildConfig.autoDeleteEndedGiveaways && giveawayMessage) {
         try {
-          // Wait 10 seconds before deleting so users can see the result
           setTimeout(async () => {
             try {
               await giveawayMessage.delete();
@@ -367,17 +482,10 @@ async function endGiveaway(giveaway) {
   }
 }
 
-/**
- * Log giveaway events to the configured logging channel
- * @param {string} guildId - Guild ID
- * @param {string} eventType - Event type: 'entry', 'end', 'create'
- * @param {object} data - Event data
- */
 async function logGiveawayEvent(guildId, eventType, data) {
   try {
     const guildConfig = await GuildConfig.findOne({ guildId });
 
-    // Check if logging is enabled and channel is set
     if (
       !guildConfig ||
       !guildConfig.enableLogging ||

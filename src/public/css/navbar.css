@@ -1,4 +1,4 @@
-/* Glassmorphism Navbar */
+
 .navbar {
   background: rgba(var(--background-rgb), 0.8);
   backdrop-filter: blur(var(--blur-amount));
@@ -133,7 +133,7 @@
   flex-shrink: 0;
 }
 
-/* User Dropdown - Fixed hover behavior */
+
 .navbar-user {
   position: relative;
 }
@@ -153,7 +153,7 @@
   border-color: var(--primary);
 }
 
-/* Glassmorphism Dropdown Menu */
+
 .navbar-user-menu {
   position: absolute;
   top: 100%;
@@ -174,7 +174,7 @@
   overflow: hidden;
 }
 
-/* Fixed: Dropdown stays visible when hovering parent or menu */
+
 .navbar-user:hover .navbar-user-menu,
 .navbar-user:focus-within .navbar-user-menu {
   opacity: 1;
@@ -238,7 +238,7 @@
   box-shadow: 0 4px 12px rgba(88, 101, 242, 0.3);
 }
 
-/* Server Switcher Dropdown */
+
 .server-switcher {
   position: relative;
 }
@@ -339,7 +339,7 @@
   font-weight: bold;
 }
 
-/* Responsive Design */
+
 @media (max-width: 1024px) {
   .navbar-container {
     padding: 0 1.5rem;

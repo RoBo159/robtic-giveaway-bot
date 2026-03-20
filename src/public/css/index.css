@@ -9,7 +9,7 @@
   position: relative;
 }
 
-/* Animated background gradient */
+
 .landing-container::before {
   content: '';
   position: fixed;
@@ -68,7 +68,7 @@
   margin-top: 2rem;
 }
 
-/* Glassmorphism Feature Card */
+
 .feature-card {
   padding: 1.5rem;
   background: rgba(var(--background-rgb), 0.6);
@@ -139,7 +139,7 @@
   font-size: 1.2rem;
 }
 
-/* Footer Styles */
+
 .app-footer {
   width: 100%;
   margin-top: 4rem;

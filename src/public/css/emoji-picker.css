@@ -1,4 +1,4 @@
-/* Emoji Picker Modal Styles */
+
 .emoji-picker-modal {
     display: none;
     position: fixed;
@@ -118,7 +118,7 @@
     display: none;
 }
 
-/* Emoji Button Trigger */
+
 .emoji-btn-trigger {
     background: var(--secondary);
     border: 1px solid var(--border);
@@ -151,7 +151,7 @@
     vertical-align: middle;
 }
 
-/* Inline emoji input group */
+
 .emoji-input-row {
     display: flex;
     gap: 0.5rem;
@@ -163,10 +163,10 @@
 }
 
 .emoji-input-row .emoji-btn-wrapper {
-    padding-top: 1.75rem; /* Align with input that has label */
+    padding-top: 1.75rem; 
 }
 
-/* Button name with emoji inline */
+
 .button-name-group {
     display: flex;
     gap: 0.5rem;

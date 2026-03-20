@@ -1,19 +1,24 @@
-# CheckBot Dashboard
+# Giveaway Bot
+
+<div align="center">
+<img src="https://raw.githubusercontent.com/robo159/assets/main/images/robtic.png" width="80%" alt="Robtic" />
 
 ![License](https://img.shields.io/github/license/RoBo159/robtic-giveaway-bot)
 ![Node Version](https://img.shields.io/node/v/22)
+
+</div>
 
 A robust Discord Giveaway Bot featuring a comprehensive web dashboard for managing giveaways, customizing templates, and viewing real-time logs. Built with Node.js, Express, Discord.js, and MongoDB.
 
 ## Features
 
--   **Web Dashboard**: Intuitive interface for creating and managing giveaways.
--   **Custom Templates**: Define and reuse giveaway message templates.
--   **Role Integration**: User role management and permissions.
--   **Real-time Logs**: Track giveaway events and interactions.
--   **Discord OAuth2**: Secure login via Discord.
--   **Guild Configuration**: Per-guild settings managed through the database.
--   **Responsive Design**: Mobile-friendly dashboard using EJS templates.
+- **Web Dashboard**: Intuitive interface for creating and managing giveaways.
+- **Custom Templates**: Define and reuse giveaway message templates.
+- **Role Integration**: User role management and permissions.
+- **Real-time Logs**: Track giveaway events and interactions.
+- **Discord OAuth2**: Secure login via Discord.
+- **Guild Configuration**: Per-guild settings managed through the database.
+- **Responsive Design**: Mobile-friendly dashboard using EJS templates.
 
 ## specific Project Structure
 
@@ -34,19 +39,21 @@ src/
 
 ### Prerequisites
 
--   [Node.js](https://nodejs.org/) (v16.9.0 or higher recommended for Discord.js v14)
--   [MongoDB](https://www.mongodb.com/) (Local or Atlas)
--   Discord Application with Bot Token and OAuth2 Client ID/Secret
+- [Node.js](https://nodejs.org/) (v20.0.0 or higher recommended for Discord.js v14)
+- [MongoDB](https://www.mongodb.com/) (Local or Atlas)
+- Discord Application with Bot Token and OAuth2 Client ID/Secret
 
 ### Installation
 
 1.  **Clone the repository**
+
     ```bash
     git clone https://github.com/yourusername/checkbot-dashboard.git
     cd checkbot-dashboard
     ```
 
 2.  **Install dependencies**
+
     ```bash
     npm install
     ```
@@ -57,7 +64,7 @@ src/
     ```env
     # Server Configuration
     PORT=3000
-    
+
     # Database
     MONGODB_URI=mongodb://localhost:27017/checkbot
 
@@ -65,7 +72,7 @@ src/
     DISCORD_CLIENT_ID=your_client_id
     DISCORD_CLIENT_SECRET=your_client_secret
     DISCORD_CALLBACK_URL=http://localhost:3000/auth/discord/callback
-    
+
     # Discord Bot Token
     DISCORD_BOT_TOKEN=your_bot_token
 
@@ -74,13 +81,15 @@ src/
     ```
 
 4.  **Run the application**
-    
+
     Development mode (with nodemon):
+
     ```bash
     npm run dev
     ```
 
     Production mode:
+
     ```bash
     npm start
     ```

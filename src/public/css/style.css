@@ -1,11 +1,11 @@
-/* Dark Blue Glassmorphism Design System */
+
 :root, .dark {
-  /* Using Deep Blue (Hue ~265) base */
+  
   --background: oklch(14% 0.03 265);
   --foreground: oklch(0.98 0.01 265);
   --background-rgb: 10, 20, 40;
 
-  /* Vibrant Blue Primary */
+  
   --primary: oklch(0.6 0.2 265);
   --primary-rgb: 60, 120, 255;
   --ring-rgb: 60, 120, 255;
@@ -47,14 +47,14 @@
   --success: oklch(0.55 0.15 145);
   --success-foreground: oklch(0.98 0.01 265);
 
-  /* Glassmorphism */
+  
   --glass-bg: rgba(var(--background-rgb), 0.7);
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   --blur-amount: 16px;
 }
 
-/* Custom Scrollbar - Global */
+
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--primary) rgba(var(--background-rgb), 0.3);
@@ -107,7 +107,7 @@ ul {
   list-style: none;
 }
 
-/* Utilities */
+
 .container {
   width: 100%;
   max-width: 1400px;
@@ -148,7 +148,7 @@ ul {
 .border-border { border-color: var(--border); }
 .text-destructive { color: var(--destructive); }
 
-/* Components */
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -195,7 +195,7 @@ ul {
   opacity: 0.9;
 }
 
-/* Glassmorphism Card */
+
 .card {
   background: rgba(var(--background-rgb), 0.6);
   backdrop-filter: blur(var(--blur-amount));
@@ -304,7 +304,7 @@ select.input option {
   font-weight: 500;
 }
 
-/* Grid layout for servers */
+
 .grid-servers {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -326,7 +326,7 @@ select.input option {
   margin-bottom: 1rem;
 }
 
-/* Emoji Images - for custom Discord emojis */
+
 .emoji-img {
   display: inline-block;
   vertical-align: middle;

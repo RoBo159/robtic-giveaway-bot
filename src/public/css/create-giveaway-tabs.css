@@ -1,5 +1,5 @@
 
-/* Tabs for Embed Config */
+
 .embed-config-tabs {
     display: flex;
     gap: 1rem;
@@ -27,7 +27,7 @@
     color: var(--foreground);
 }
 
-/* Embed Image Container */
+
 .embed-image-container {
     margin-top: 10px;
 }

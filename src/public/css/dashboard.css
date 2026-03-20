@@ -47,7 +47,7 @@
   flex-wrap: wrap;
 }
 
-/* Fix Dropdown Color - Uses theme variables */
+
 select.input option {
   background-color: var(--card);
   color: var(--foreground);
@@ -82,7 +82,7 @@ select.input option {
   gap: 1.5rem;
 }
 
-/* Glassmorphism Server Card */
+
 .server-card {
   display: flex;
   flex-direction: column;

@@ -111,7 +111,7 @@
   font-weight: 500;
 }
 
-/* Winner Badge with Tooltip */
+
 .winner-badge {
   display: inline-flex;
   align-items: center;
@@ -189,7 +189,7 @@
   opacity: 0.5;
 }
 
-/* Action Menu */
+
 .action-menu {
   position: relative;
 }
@@ -214,7 +214,7 @@
   color: var(--foreground);
 }
 
-/* Glassmorphism Action Dropdown */
+
 .action-dropdown {
   position: absolute;
   top: 100%;
@@ -279,7 +279,7 @@
   background: rgba(255, 100, 100, 0.1);
 }
 
-/* Glassmorphism Modal */
+
 .modal {
   display: none;
   position: fixed;
@@ -408,7 +408,7 @@
   }
 }
 
-/* Pagination */
+
 .pagination {
   display: flex;
   align-items: center;
@@ -478,7 +478,7 @@
   padding: 0 0.25rem;
 }
 
-/* Pagination Wrapper */
+
 .pagination-wrapper {
   display: flex;
   align-items: center;
@@ -492,7 +492,7 @@
   flex: 1;
 }
 
-/* Per-page Selector */
+
 .per-page-selector {
   display: flex;
   align-items: center;

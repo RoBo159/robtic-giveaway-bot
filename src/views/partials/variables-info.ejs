@@ -1,4 +1,4 @@
-<!-- Variables Info Tooltip -->
+
 <div class="variables-info-container">
     <button type="button" class="variables-info-btn" onclick="toggleVariablesInfo()" title="Available Variables">
         <i class="fa-solid fa-info-circle"></i>
@@ -55,9 +55,7 @@
 function toggleVariablesInfo() {
     const popup = document.getElementById('variablesInfoPopup');
     popup.classList.toggle('show');
-}
-
-// Close popup when clicking outside
+}
 document.addEventListener('click', (e) => {
     const container = e.target.closest('.variables-info-container');
     const popup = document.getElementById('variablesInfoPopup');

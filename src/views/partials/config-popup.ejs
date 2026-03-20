@@ -1,4 +1,4 @@
-<!-- Config Settings Popup -->
+
 <div class="config-popup-overlay" id="configPopupOverlay" onclick="closeConfigPopup(event)">
     <div class="config-popup" onclick="event.stopPropagation()">
         <div class="config-popup-header">
@@ -9,19 +9,19 @@
         </div>
         
         <form id="configPopupForm" class="config-popup-body">
-            <!-- Giveaway Type -->
+            
             <div class="config-section">
                 <label class="config-label">Giveaway Type</label>
                 <div class="config-type-selector">
                     <label class="config-type-option">
-                        <input type="radio" name="popupGiveawayType" value="reaction" <%= config.giveawayType === 'reaction' ? 'checked' : '' %> onchange="updatePopupPreview()">
+                        <input type="radio" name="popupGiveawayType" value="reaction" <%= (config.giveawayType || 'reaction') === 'reaction' ? 'checked' : '' %> onchange="updatePopupPreview()">
                         <div class="config-type-card">
                             <i class="fa-solid fa-face-smile"></i>
                             <span>Reaction</span>
                         </div>
                     </label>
                     <label class="config-type-option">
-                        <input type="radio" name="popupGiveawayType" value="button" <%= config.giveawayType === 'button' ? 'checked' : '' %> onchange="updatePopupPreview()">
+                        <input type="radio" name="popupGiveawayType" value="button" <%= (config.giveawayType || 'reaction') === 'button' ? 'checked' : '' %> onchange="updatePopupPreview()">
                         <div class="config-type-card">
                             <i class="fa-solid fa-square"></i>
                             <span>Button</span>
@@ -30,7 +30,7 @@
                 </div>
             </div>
 
-            <!-- Reaction Options -->
+            
             <div class="config-section" id="popupReactionOptions">
                 <label class="config-label">Reaction Emoji</label>
                 <div class="emoji-input-group">
@@ -42,7 +42,7 @@
                 </div>
             </div>
 
-            <!-- Button Options -->
+            
             <div class="config-section" id="popupButtonOptions" style="display: none;">
                 <label class="config-label">Button Settings</label>
                 <div class="config-input-row">
@@ -78,7 +78,7 @@
                 </div>
             </div>
 
-            <!-- Embed Settings -->
+            
             <div class="config-section">
                 <label class="config-label">Embed Color</label>
                 <div class="config-color-picker">
@@ -115,12 +115,13 @@
                     <label class="config-label" style="margin-top: 0.75rem;">Ended Image</label>
                     <input type="file" form="createForm" name="endedEmbedImage" id="endedEmbedImageInput" accept="image/*" class="config-input" onchange="previewImage(this, 'ended')">
 
-                    <label class="config-label" style="margin-top: 0.75rem;">End Behavior (Buttons)</label>
-                    <select form="createForm" name="endBehavior" id="endBehaviorSelect" class="config-input" onchange="updatePreview()">
-                        <option value="disable">Disable Buttons</option>
-                        <option value="remove">Remove Buttons</option>
-                        <option value="keep">Keep Buttons (Active)</option>
-                    </select>
+                    <div id="endBehaviorSection" style="display: none;">
+                        <label class="config-label" style="margin-top: 0.75rem;">End Behavior (Buttons)</label>
+                        <select form="createForm" name="endBehavior" id="endBehaviorSelect" class="config-input" onchange="updatePreview()">
+                            <option value="disable" <%= (config.endBehavior || 'disable') === 'disable' ? 'selected' : '' %>>Disable Buttons</option>
+                            <option value="remove" <%= (config.endBehavior || 'disable') === 'remove' ? 'selected' : '' %>>Remove Buttons</option>
+                        </select>
+                    </div>
                 </div>
             </div>
         </form>
@@ -198,7 +199,6 @@ function setPopupState(state) {
         if (document.getElementById('endedEmbedDescriptionInput')) document.getElementById('endedEmbedDescriptionInput').value = state.endedEmbedDescription || '';
         if (document.getElementById('endBehaviorSelect')) document.getElementById('endBehaviorSelect').value = state.endBehavior || 'disable';
 
-        // File inputs cannot restore a prior selected file; cancel discards pending file selection.
         if (document.getElementById('embedImageInput')) document.getElementById('embedImageInput').value = '';
         if (document.getElementById('endedEmbedImageInput')) document.getElementById('endedEmbedImageInput').value = '';
 
@@ -325,12 +325,18 @@ function initPopupEmojis() {
 
 function updatePopupPreview() {
     const giveawayType = document.querySelector('input[name="popupGiveawayType"]:checked')?.value || 'reaction';
-    
-    // Show/hide sections
+
     document.getElementById('popupReactionOptions').style.display = giveawayType === 'reaction' ? 'block' : 'none';
     document.getElementById('popupButtonOptions').style.display = giveawayType === 'button' ? 'block' : 'none';
-    
-    // Update color value display
+    const endBehaviorSection = document.getElementById('endBehaviorSection');
+    if (endBehaviorSection) {
+        endBehaviorSection.style.display = giveawayType === 'button' ? 'block' : 'none';
+    }
+    if (giveawayType !== 'button') {
+        const endBehaviorSelect = document.getElementById('endBehaviorSelect');
+        if (endBehaviorSelect) endBehaviorSelect.value = 'disable';
+    }
+
     const colorInput = document.getElementById('popupEmbedColor');
     document.getElementById('popupColorValue').textContent = colorInput.value;
 
@@ -368,8 +374,7 @@ function saveConfigSettings() {
     if (endedFile) multipart.append('endedEmbedImage', endedFile);
 
     setConfigSavingState(true);
-    
-    // Submit to server
+
     fetch('/dashboard/<%= guild.id %>/config', {
         method: 'POST',
         headers: {
@@ -388,7 +393,6 @@ function saveConfigSettings() {
             throw new Error('Failed to save settings');
         }
 
-        // Server save succeeded; UI updates are handled separately to avoid false failed state.
         showSnackbar('Settings saved!', 'success');
 
         try {
@@ -419,17 +423,15 @@ function saveConfigSettings() {
 }
 
 function updateMainPreview() {
-    // Update embed color
+
     const embedBorder = document.querySelector('.embed-border');
     if (embedBorder) embedBorder.style.backgroundColor = config.embedColor;
-    
-    // Update title and description
+
     const titleEl = document.getElementById('previewTitle');
     const descEl = document.getElementById('previewDescription');
     if (titleEl) titleEl.textContent = config.embedTitle;
     if (descEl) descEl.textContent = config.embedDescription;
-    
-    // Update emoji previews
+
     if (config.giveawayType === 'button') {
         setEmojiContent('previewButtonEmoji', config.buttonEmoji, 20);
         const labelEl = document.getElementById('previewButtonLabel');
@@ -439,7 +441,6 @@ function updateMainPreview() {
     }
 }
 
-// Close on Escape key
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && document.getElementById('configPopupOverlay').classList.contains('show')) {
         closeConfigPopup();

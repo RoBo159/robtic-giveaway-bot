@@ -23,8 +23,7 @@ passport.use(new DiscordStrategy({
 }, async (accessToken, refreshToken, profile, done) => {
     try {
         let user = await User.findOne({ discordId: profile.id });
-        if (user) {
-            // Update guilds and avatar
+        if (user) {
             user.username = profile.username;
             user.avatar = profile.avatar;
             user.guilds = profile.guilds;

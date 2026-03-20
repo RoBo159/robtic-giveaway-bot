@@ -1,12 +1,6 @@
-/**
- * Centralized Data Configuration
- * Edit this file to customize all default messages, templates, colors, and settings
- */
 
-module.exports = {
-    // =============================================
-    // DEFAULT TEMPLATES (Shown in Create Giveaway)
-    // =============================================
+
+module.exports = {
     defaultTemplates: {
         nitro: {
             name: 'Discord Nitro',
@@ -22,82 +16,48 @@ module.exports = {
             winnersCount: 1,
             maxEntries: 0
         }
-    },
-
-    // =============================================
-    // DEFAULT MESSAGES
-    // =============================================
-    messages: {
-        // Giveaway Entry Messages
+    },
+    messages: {
         alreadyInGiveaway: 'You are already in this giveaway!',
         joinSuccess: 'You have entered the giveaway!',
         maxEntriesReached: 'This giveaway has reached the maximum number of entries!',
         noRequiredRole: 'You do not have the required role to enter.',
-        giveawayInvalid: 'This giveaway is over or invalid.',
-
-        // Giveaway End Messages
+        giveawayInvalid: 'This giveaway is over or invalid.',
         giveawayEnded: '🎉 Congratulations {user}! You won **{prize}**!',
-        noWinners: 'Giveaway for **{prize}** ended, but no one entered!',
-
-        // DM Messages
+        noWinners: 'Giveaway for **{prize}** ended, but no one entered!',
         dmWinner: 'Congratulations! You won {prize}!',
         dmFooter: '*From: {guildName}*',
-    },
-
-    // =============================================
-    // EMBED DEFAULTS
-    // =============================================
-    embeds: {
-        // Active Giveaway Embed
+    },
+    embeds: {
         active: {
             title: 'New Giveaway!',
             description: 'React to enter!',
             color: '#0057ff'
-        },
-
-        // Ended Giveaway Embed
+        },
         ended: {
             title: '🎉 Giveaway Ended!',
             description: 'Winner: {winners}\nPrize: {prize}',
             color: '#808080' // Gray for ended
-        },
-
-        // Logging Embed Colors
+        },
         logging: {
             entry: '#00FF00',   // Green
             end: '#FF6B6B',     // Red
             create: '#7289DA'   // Discord Blue
         }
-    },
-
-    // =============================================
-    // BUTTON DEFAULTS
-    // =============================================
+    },
     buttons: {
         name: 'Enter Giveaway',
         emoji: '🎁',
         color: 'primary' // primary, success, danger, secondary
-    },
-
-    // =============================================
-    // REACTION DEFAULTS
-    // =============================================
+    },
     reactions: {
         emoji: '🎉'
-    },
-
-    // =============================================
-    // GIVEAWAY SETTINGS
-    // =============================================
+    },
     giveawaySettings: {
         checkInterval: 10 * 1000, // 10 seconds - how often to check for ended giveaways
         autoDeleteDelay: 10000,   // 10 seconds - delay before auto-deleting ended giveaway message
         sessionDuration: 14 * 24 * 60 * 60 * 1000 // 14 days - session cookie duration
-    },
-
-    // =============================================
-    // LOGGING EMBED TEMPLATES
-    // =============================================
+    },
     loggingEmbeds: {
         entry: {
             color: '#00FF00',
@@ -114,11 +74,7 @@ module.exports = {
             title: '🎉 Giveaway Created',
             description: '**Prize:** {prize}\n**Ends:** <t:{endTimestamp}:R>'
         }
-    },
-
-    // =============================================
-    // VARIABLE DESCRIPTIONS (for info tooltips)
-    // =============================================
+    },
     variables: {
         '{user}': 'Mentions the winner(s)',
         '{prize}': 'The giveaway prize',
@@ -130,11 +86,7 @@ module.exports = {
         '{#channelId}': 'Mention a channel',
         '{&roleId}': 'Mention a role',
         '{@userId}': 'Mention a user'
-    },
-
-    // =============================================
-    // PAGINATION DEFAULTS
-    // =============================================
+    },
     pagination: {
         defaultLimit: 10,
         allowedLimits: [10, 50, 100]

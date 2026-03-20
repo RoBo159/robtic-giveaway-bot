@@ -7,7 +7,6 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Configure Multer for file uploads
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         const uploadDir = path.join(__dirname, '../public/uploads');
@@ -32,7 +31,6 @@ async function uploadToFreeImageHost(localPath, originalName, mimeType) {
     const fileName = originalName || path.basename(localPath);
     const errors = [];
 
-    // Provider 1: 0x0.st
     try {
         const form0x0 = new FormData();
         form0x0.append('file', new Blob([buffer], { type: mimeType || 'application/octet-stream' }), fileName);
@@ -49,7 +47,6 @@ async function uploadToFreeImageHost(localPath, originalName, mimeType) {
         errors.push(`0x0.st error: ${e.message}`);
     }
 
-    // Provider 2: catbox.moe
     try {
         const formCatbox = new FormData();
         formCatbox.append('reqtype', 'fileupload');
@@ -70,17 +67,14 @@ async function uploadToFreeImageHost(localPath, originalName, mimeType) {
     throw new Error(`All image hosts failed: ${errors.join(' | ')}`);
 }
 
-// Middleware to check if logged in
 function checkAuth(req, res, next) {
     if (req.isAuthenticated()) return next();
     res.redirect('/');
 }
 
-// Permissions Check Helper (Manage Guild or Admin)
 const MANAGE_GUILD = 0x20;
 const ADMIN = 0x8;
 
-// Helper to get user's manageable guilds for the server switcher
 function getUserGuilds(req) {
     const userGuilds = req.user.guilds;
     const botGuilds = req.bot.guilds.cache;
@@ -98,7 +92,6 @@ function getUserGuilds(req) {
 
 router.use(checkAuth);
 
-// Dashboard Main: List Servers
 router.get('/', async (req, res) => {
     try {
         const userGuilds = req.user.guilds;
@@ -109,7 +102,6 @@ router.get('/', async (req, res) => {
             return (perms & ADMIN) === ADMIN || (perms & MANAGE_GUILD) === MANAGE_GUILD;
         });
 
-        // Add 'botIn' property
         const guildsInfo = manageableGuilds.map(guild => ({
             ...guild,
             botIn: botGuilds.has(guild.id)
@@ -122,11 +114,9 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Server Config / Bot Panel
 router.get('/:guildId', async (req, res) => {
     const guildId = req.params.guildId;
-    
-    // Security Check: Is user admin in this guild?
+
     const userGuild = req.user.guilds.find(g => g.id === guildId);
     if (!userGuild) return res.status(403).send('Forbidden');
     const perms = parseInt(userGuild.permissions);
@@ -134,9 +124,8 @@ router.get('/:guildId', async (req, res) => {
         return res.status(403).send('Forbidden');
     }
 
-    // Check if bot is in guild
     if (!req.bot.guilds.cache.has(guildId)) {
-        // Redirect to add bot page or show invite link
+
         const clientId = req.bot.user.id;
         const inviteLink = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&permissions=8&scope=bot`;
         return res.render('add-bot', { inviteLink, guildName: userGuild.name });
@@ -145,20 +134,17 @@ router.get('/:guildId', async (req, res) => {
     res.redirect(`/dashboard/${guildId}/create`);
 });
 
-// Logs Panel
 router.get('/:guildId/logs', async (req, res) => {
     const guildId = req.params.guildId;
     const guild = req.bot.guilds.cache.get(guildId);
     if (!guild) return res.redirect('/dashboard');
 
-    // Pagination with configurable limit
     const page = parseInt(req.query.page) || 1;
     const allowedLimits = [10, 50, 100];
     let limit = parseInt(req.query.limit) || 10;
     if (!allowedLimits.includes(limit)) limit = 10;
     const skip = (page - 1) * limit;
-    
-    // Get total count for pagination
+
     const totalCount = await Giveaway.countDocuments({ guildId });
     const totalPages = Math.ceil(totalCount / limit);
     
@@ -167,7 +153,6 @@ router.get('/:guildId/logs', async (req, res) => {
         .skip(skip)
         .limit(limit);
 
-    // Enriched Data (fetch names)
     const giveaways = await Promise.all(giveawaysData.map(async (g) => {
         let hostName = g.hostId;
         let channelName = g.channelId;
@@ -175,21 +160,18 @@ router.get('/:guildId/logs', async (req, res) => {
         let winnerNames = [];
 
         try {
-            // Get Host Name
+
             const user = await req.bot.users.fetch(g.hostId).catch(() => null);
             if (user) hostName = user.username;
 
-            // Get Channel Name
             const channel = guild.channels.cache.get(g.channelId);
             if (channel) channelName = `#${channel.name}`;
-            
-            // Get Role Name
+
             if (g.requiredRole) {
                 const role = guild.roles.cache.get(g.requiredRole);
                 if (role) roleName = `@${role.name}`;
             }
-            
-            // Get Winner Names
+
             if (g.winners && g.winners.length > 0) {
                 for (const winnerId of g.winners) {
                     try {
@@ -225,7 +207,6 @@ router.get('/:guildId/logs', async (req, res) => {
     });
 });
 
-// Update Config
 router.post('/:guildId/config', upload.fields([
     { name: 'embedImage', maxCount: 1 },
     { name: 'endedEmbedImage', maxCount: 1 }
@@ -248,6 +229,9 @@ router.post('/:guildId/config', upload.fields([
     } = req.body;
 
     const existingConfig = await GuildConfig.findOne({ guildId });
+    const resolvedGiveawayType = (giveawayType === 'button' || giveawayType === 'reaction')
+        ? giveawayType
+        : (existingConfig?.giveawayType || 'reaction');
 
     let activeImageUrl = embedImage || existingConfig?.embedImage || null;
     let endedImageUrl = endedEmbedImage || existingConfig?.endedEmbedImage || null;
@@ -275,7 +259,7 @@ router.post('/:guildId/config', upload.fields([
     }
     
     const updatedConfig = {
-        giveawayType, 
+        giveawayType: resolvedGiveawayType,
         embedColor, 
         reactionEmoji, 
         embedTitle, 
@@ -284,7 +268,9 @@ router.post('/:guildId/config', upload.fields([
         endedEmbedImage: endedImageUrl,
         endedEmbedTitle: endedEmbedTitle || existingConfig?.endedEmbedTitle || '🎉 Giveaway Ended!',
         endedEmbedDescription: endedEmbedDescription || existingConfig?.endedEmbedDescription || 'Winner: {winners}\nPrize: {prize}',
-        endBehavior: endBehavior || existingConfig?.endBehavior || 'disable',
+        endBehavior: resolvedGiveawayType === 'button'
+            ? ((endBehavior === 'remove' || endBehavior === 'disable') ? endBehavior : (existingConfig?.endBehavior || 'disable'))
+            : 'disable',
         buttonName: buttonName || 'Join Giveaway',
         buttonEmoji: buttonEmoji || '🎉',
         buttonColor: buttonColor || 'primary'
@@ -295,8 +281,7 @@ router.post('/:guildId/config', upload.fields([
         updatedConfig, 
         { upsert: true }
     );
-    
-    // Return JSON if request expects it (from popup)
+
     if (req.xhr || req.headers.accept?.includes('application/json')) {
         return res.json({ success: true, config: updatedConfig });
     }
@@ -304,7 +289,6 @@ router.post('/:guildId/config', upload.fields([
     res.redirect(`/dashboard/${guildId}/config`);
 });
 
-// Settings Panel
 router.get('/:guildId/settings', async (req, res) => {
     const guildId = req.params.guildId;
     const guild = req.bot.guilds.cache.get(guildId);
@@ -336,7 +320,6 @@ router.get('/:guildId/settings', async (req, res) => {
     });
 });
 
-// Update Settings
 router.post('/:guildId/settings', async (req, res) => {
     const guildId = req.params.guildId;
     const { 
@@ -384,7 +367,6 @@ router.post('/:guildId/settings', async (req, res) => {
     res.redirect(`/dashboard/${guildId}/settings`);
 });
 
-// Create Giveaway Page
 router.get('/:guildId/create', async (req, res) => {
     const guildId = req.params.guildId;
     const guild = req.bot.guilds.cache.get(guildId);
@@ -396,15 +378,13 @@ router.get('/:guildId/create', async (req, res) => {
         .map(ch => ({ id: ch.id, name: ch.name }));
 
     const templates = await Template.find({ guildId });
-    
-    // Get config for preview
+
     let config = await GuildConfig.findOne({ guildId });
     if (!config) {
         config = new GuildConfig({ guildId });
         await config.save();
     }
-    
-    // Get server emojis for emoji picker
+
     const serverEmojis = guild.emojis.cache.map(e => ({
         id: e.id,
         name: e.name,
@@ -425,7 +405,6 @@ router.get('/:guildId/create', async (req, res) => {
     });
 });
 
-// Create Giveaway Action
 router.post('/:guildId/create', upload.fields([
     { name: 'embedImage', maxCount: 1 },
     { name: 'endedEmbedImage', maxCount: 1 }
@@ -447,7 +426,6 @@ router.post('/:guildId/create', upload.fields([
     
     const config = await GuildConfig.findOne({ guildId }) || {};
 
-    // Process Images
     let activeImageUrl = config.embedImage || null;
     let endedImageUrl = config.endedEmbedImage || null;
     
@@ -473,24 +451,20 @@ router.post('/:guildId/create', upload.fields([
             }
         }
     }
-    
-    // Simple duration parsing (assuming minutes for demo, user can improve)
+
     const endTime = new Date(Date.now() + parseInt(duration) * 60000);
     
     const { parseTemplate } = require('../utils/templateParser');
 
-    // Send to Discord
     const { EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
-    
-    // Map button color to ButtonStyle
+
     const buttonStyleMap = {
         'primary': ButtonStyle.Primary,
         'success': ButtonStyle.Success,
         'danger': ButtonStyle.Danger,
         'secondary': ButtonStyle.Secondary
     };
-    
-    // Prepare template data for description parsing
+
     const templateData = {
         prize,
         userId: req.user.discordId,
@@ -498,30 +472,27 @@ router.post('/:guildId/create', upload.fields([
         endTime,
         winnersCount: parseInt(winnersCount) || 1
     };
-    
-    // Determine Description
-    // Use submitted description or fallback to default
+
+
     let descriptionTemplate = embedDescription || config.embedDescription || 'React to enter!';
     let description = parseTemplate(descriptionTemplate, templateData);
-    
-    // Append auto-info only if it doesn't look like the user added it manually?
-    // Or just append it if the user didn't use the specific variables?
-    // User requested "Support variables" so they can likely construct the whole thing.
-    // However, if they just typed "Hello", they might miss the prize info.
-    // For now, let's treat the description as valid.
-    // But for backward compatibility with the user request context "fix the ended giveaway embed make it support variables",
-    // they probably want full control.
-    // We will append critical info ONLY if the description seems "simple" (doesn't contain variable for time/prize).
-    // Or we stick to the previous logic of appending footer info for consistency, 
-    // BUT the previous code appended it unconditionally.
-    // Let's modify slightly: If description doesn't have {endTime} variable (or logic around it), we append the time.
-    
-    // Actually, simply appending is safer for now to ensure info is there.
+
+
+
+
+
+
+
+
+
+
+
+
     if (!description.includes(prize) && !descriptionTemplate.includes('{prize}')) {
          description += `\n\n**Prize:** ${prize}`;
     }
-    // Always append end time if not present, as it's crucial for discord relative time
-    // But we check based on template usage.
+
+
     if (!descriptionTemplate.includes('{duration}') && !descriptionTemplate.includes('{endTime}')) {
          description += `\n**Ends:** <t:${Math.floor(endTime.getTime()/1000)}:R>`;
     }
@@ -562,8 +533,7 @@ router.post('/:guildId/create', upload.fields([
     try {
         const channel = await req.bot.channels.fetch(channelId);
         let message;
-        
-        // Send mention before embed if enabled
+
         if (config.mentionEnabled) {
             let mentionText = '';
             switch (config.mentionType) {
@@ -594,8 +564,7 @@ router.post('/:guildId/create', upload.fields([
                 .setCustomId('join_giveaway')
                 .setLabel(config.buttonName || 'Enter Giveaway')
                 .setStyle(buttonStyleMap[config.buttonColor] || ButtonStyle.Primary);
-            
-            // Add emoji if configured
+
             if (config.buttonEmoji) {
                 joinBtn.setEmoji(config.buttonEmoji);
             }
@@ -604,10 +573,14 @@ router.post('/:guildId/create', upload.fields([
             messageOptions.components = [row];
             message = await channel.send(messageOptions);
         } else {
-            // Reaction
+
             message = await channel.send(messageOptions);
             await message.react(config.reactionEmoji || '🎉');
         }
+
+        const resolvedEndBehavior = config.giveawayType === 'button'
+            ? ((endBehavior === 'remove' || endBehavior === 'disable') ? endBehavior : (config.endBehavior || 'disable'))
+            : 'disable';
 
         const newGiveaway = new Giveaway({
             guildId,
@@ -619,8 +592,7 @@ router.post('/:guildId/create', upload.fields([
             endTime,
             hostId: req.user.discordId,
             requiredRole: requiredRole || null,
-            
-            // New Config Fields
+
             embedTitle: embedTitle || config.embedTitle,
             embedDescription: embedDescription || config.embedDescription,
             embedImage: activeImageUrl,
@@ -628,13 +600,29 @@ router.post('/:guildId/create', upload.fields([
             endedEmbedTitle: endedEmbedTitle || config.endedEmbedTitle,
             endedEmbedDescription: endedEmbedDescription || config.endedEmbedDescription,
             endedEmbedImage: endedImageUrl,
-            endBehavior: endBehavior || 'disable'
+            endBehavior: resolvedEndBehavior
         });
 
         await newGiveaway.save();
 
+        if (config.giveawayType === 'button') {
+            try {
+                const scopedJoinBtn = new ButtonBuilder()
+                    .setCustomId(`join_giveaway:${message.id}`)
+                    .setLabel(config.buttonName || 'Enter Giveaway')
+                    .setStyle(buttonStyleMap[config.buttonColor] || ButtonStyle.Primary);
 
-        // Log giveaway creation
+                if (config.buttonEmoji) {
+                    scopedJoinBtn.setEmoji(config.buttonEmoji);
+                }
+
+                const scopedRow = new ActionRowBuilder().addComponents(scopedJoinBtn);
+                await message.edit({ components: [scopedRow] });
+            } catch (editError) {
+                console.error('Failed to scope giveaway button customId:', editError.message);
+            }
+        }
+
         if (req.logGiveawayEvent) {
             await req.logGiveawayEvent(guildId, 'create', {
                 prize,
@@ -649,13 +637,11 @@ router.post('/:guildId/create', upload.fields([
     res.redirect(`/dashboard/${guildId}/logs`);
 });
 
-// Delete Giveaway
 router.delete('/:guildId/giveaway/:id', async (req, res) => {
     try {
         const guildId = req.params.guildId;
         const giveawayId = req.params.id;
 
-        // Check if user is guild owner or has admin permissions
         const guild = req.bot.guilds.cache.get(guildId);
         if (!guild) {
             return res.status(404).json({ error: 'Guild not found' });
@@ -666,13 +652,11 @@ router.delete('/:guildId/giveaway/:id', async (req, res) => {
             return res.status(403).json({ error: 'You do not have permission to delete this giveaway' });
         }
 
-        // Find and delete the giveaway
         const giveaway = await Giveaway.findByIdAndDelete(giveawayId);
         if (!giveaway) {
             return res.status(404).json({ error: 'Giveaway not found' });
         }
 
-        // Try to delete the Discord message if it exists
         try {
             const channel = await req.bot.channels.fetch(giveaway.channelId);
             const message = await channel.messages.fetch(giveaway.messageId);
@@ -688,8 +672,7 @@ router.delete('/:guildId/giveaway/:id', async (req, res) => {
     }
 });
 
-// Create Template
-router.post('/:guildId/templates', async (req, res) => {
+router.post('/:guildId/templates', upload.none(), async (req, res) => {
     try {
         const guildId = req.params.guildId;
         const { name, prize, duration, winnersCount, maxEntries, channelId, requiredRole } = req.body;
@@ -712,13 +695,11 @@ router.post('/:guildId/templates', async (req, res) => {
     }
 });
 
-// Stop Giveaway (End it and declare winners)
 router.post('/:guildId/giveaway/:id/stop', async (req, res) => {
     try {
         const guildId = req.params.guildId;
         const giveawayId = req.params.id;
 
-        // Check if user is guild owner or has admin permissions
         const guild = req.bot.guilds.cache.get(guildId);
         if (!guild) {
             return res.status(404).json({ error: 'Guild not found' });
@@ -729,13 +710,11 @@ router.post('/:guildId/giveaway/:id/stop', async (req, res) => {
             return res.status(403).json({ error: 'You do not have permission to stop this giveaway' });
         }
 
-        // Find the giveaway
         const giveaway = await Giveaway.findById(giveawayId);
         if (!giveaway) {
             return res.status(404).json({ error: 'Giveaway not found' });
         }
 
-        // Randomly select winners from entries
         let winners = [];
         if (giveaway.entries.length > 0) {
             const winnerCount = Math.min(giveaway.winnersCount, giveaway.entries.length);
@@ -743,12 +722,10 @@ router.post('/:guildId/giveaway/:id/stop', async (req, res) => {
             winners = shuffled.slice(0, winnerCount);
         }
 
-        // Update giveaway
         giveaway.ended = true;
         giveaway.winners = winners;
         await giveaway.save();
 
-        // Try to update the Discord message
         try {
             const channel = await req.bot.channels.fetch(giveaway.channelId);
             const message = await channel.messages.fetch(giveaway.messageId);
